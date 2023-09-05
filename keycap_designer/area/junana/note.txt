@@ -1,0 +1,5 @@
+Margin line width should be 1 pt.
+
+For top side, the inner edge of the margin line should be the surface edge of the top side. The fillets are not included.
+
+For front side, margin line should be placed on the edge of fillet-less surface. The projection angle is 60 degree.

@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keycap-designer"
+description = "Keycap Designer for DecentKeyboards' Custom Keycaps"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    'Development Status :: 3 - Alpha',
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Microsoft :: Windows',
+    'Programming Language :: Python',
+]
+dynamic = ["version"]
+dependencies = [
+    "Pillow",
+    "opencv-python",
+    "frozendict",
+    "reportlab",
+    "cmm@git+https://github.com/hajimen/cmm.git@main",
+    "ordered_enum",
+    "prompt_toolkit",
+    "pykle_serial@git+https://github.com/hajimen/pykle_serial.git@main",
+    "scikit-image",
+    "safetensors",
+    "pikepdf",
+    "mslex"
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["keycap_designer", "keycap_designer.deform", "keycap_designer.profile"]
+
+[tool.setuptools_scm]
+write_to = "keycap_designer/_version.py"
+
+[project.optional-dependencies]
+test = ["pdf2image"]

@@ -1,0 +1,3 @@
+recursive-include keycap_designer/area/* *.png
+include keycap_designer/font/*.ttf
+include keycap_designer/icc/*.icc

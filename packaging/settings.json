@@ -1,0 +1,5 @@
+{
+	"python.analysis.include": [],
+	"python.analysis.extraPaths":	["keycap-designer"],
+	"flake8.args": ["--ignore=W293, W504, E402, F821, F403, F405", "--max-line-length", "300"]
+}
