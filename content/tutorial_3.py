@@ -40,6 +40,7 @@ def generate():
     ms[2] @= TopImage(here() / 'starter-kit/02.png', fit=Aspect) @ pale_red_bc
     # First, ms[2] already contains Image object.
     # Descriptor object in Manuscript object can be overwritten.
+    # In the case, right object overwrites left object.
     # Second, look at the color of margin.
     # fit=Aspect leaves margin as background.
 
