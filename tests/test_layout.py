@@ -129,7 +129,7 @@ class TestLayout(unittest.TestCase):
             leg('Enter') @ Specifier('225u')
         ] + Col(17) ** [
             leg('4'),
-            leg('5'),
+            leg('5') @ Specifier('Homing 1u'),
             leg('6'),
         ]
 

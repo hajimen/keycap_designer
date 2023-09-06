@@ -1,7 +1,6 @@
 import typing as ty
 from dataclasses import dataclass
 from pathlib import Path
-import collections.abc as abc
 import numpy as np
 from numpy.typing import NDArray
 import PIL.Image as PILImageModule
@@ -42,10 +41,7 @@ class Aperture(_ApertureImpl):
         super().__init__(mask_path, wh, outer_wh, offset, outer_offset, mask_center, outer_mask_center, mask.size, name)
 
 
-class CapBase(frozendict, abc.Mapping[Side, Aperture]):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+CapBase = frozendict[Side, Aperture]
 
 Sp_Cb_Dict = ty.Mapping[str, CapBase]
 Sp_Comment_Dict = ty.Mapping[str, str]

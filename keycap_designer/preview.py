@@ -230,7 +230,8 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
             doc.canvas.drawCentredString((LIVE_WIDTH / 2) * mm, (LIVE_HEIGHT - 12.) * mm, '   '.join(details))
             doc.canvas.translate(((LIVE_WIDTH - w * pitch * mag) / 2) * mm, ((LIVE_HEIGHT - 15. - h * pitch * mag) / 2) * mm)
             doc.canvas.scale(mag, mag)
-            doc.canvas.setFont('Damase', 2 * mm)
+            COMMENT_REPEAT_FONT_SIZE = 2
+            doc.canvas.setFont('Damase', COMMENT_REPEAT_FONT_SIZE * mm)
             first_page = False
             d = shapes.Drawing()
             for (r, c), (vs, angle) in kle_map.items():
@@ -267,9 +268,11 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
                                          (- iw / 2.) * mm, (- ih / 2.) * mm,
                                          iw * mm, ih * mm, [254, 255] * 3, True)
                     if aw.comment != '':
-                        doc.canvas.drawCentredString(0., (- ih / 2.) * mm, aw.comment.replace('\r', ' '))
+                        ch = ih / 2 - (aperture.outer_offset[1] + aperture.outer_wh[1]) / DPM - COMMENT_REPEAT_FONT_SIZE
+                        doc.canvas.drawCentredString(0., ch * mm, aw.comment.replace('\r', ' '))
                     if aw.repeat != 1:
-                        doc.canvas.drawCentredString(0., (ih / 2.) * mm, f'{aw.repeat} pcs')
+                        rh = ih / 2 - aperture.outer_offset[1] / DPM
+                        doc.canvas.drawCentredString(0., rh * mm, f'{aw.repeat} pcs')
                     doc.canvas.restoreState()
             doc.draw_shape(d)
     y = 0.

@@ -598,7 +598,7 @@ def manuscript_to_artwork(m: Manuscript):
                     pass
 
                 flag = (cv2.INTER_CUBIC if f.interpolate == Cubic else cv2.INTER_NEAREST) if (rw > uw) or (rh > uh) else cv2.INTER_AREA
-                img_from_file = cv2.resize(img_from_file, (rw, rh), interpolation=flag)
+                img_from_file = ty.cast(NDArray[np.uint16], cv2.resize(img_from_file, (rw, rh), interpolation=flag))
 
             img = np.zeros((ph, pw, 4), np.uint16)
             if rx > 0:
