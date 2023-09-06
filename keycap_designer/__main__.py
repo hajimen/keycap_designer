@@ -38,7 +38,7 @@ session = PromptSession(history=FileHistory('history.txt'), style=style)
 
 
 def show_pdf(pdf: Path):
-    s =platform.system() 
+    s = platform.system()
     if s == 'Darwin':
         import shlex
         subprocess.Popen([f'open {shlex.quote(str(pdf))}'], shell=True)
@@ -195,6 +195,8 @@ exit:
 
 
 def main():
+    from keycap_designer import version
+    print(f'keycap-designer {version} (C) 2023 DecentKeyboards; MIT License')
     sys.path.append(os.getcwd())
     while True:
         cont = pump()

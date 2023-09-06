@@ -157,7 +157,7 @@ def _margin_simulation(img: NDArray, cci: ColorConversionIntent, aperture: Apert
     ml = ml & (np.bitwise_not(ma))
     img3[ml] = ((img3[ml].astype(np.uint32) + 30000 * 3) / 4).astype(np.uint16)
     if SIMULATE_ANTI_BLEED:
-        from kp3.anti_bleed import simulation as simulation_anti_bleed
+        from kp3.anti_bleed import simulation as simulation_anti_bleed  # type: ignore
         return simulation_anti_bleed(img3, cci)
     else:
         return DEFAULT_CC.workspace_to_soft_proof(img3, cci.rendering_intent(), cci.bpc())
