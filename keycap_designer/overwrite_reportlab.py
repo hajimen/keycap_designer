@@ -1,5 +1,5 @@
-from reportlab.pdfbase.pdfdoc import _mode2CS
-from reportlab.pdfbase.pdfdoc import *
+import zlib
+from reportlab.pdfbase.pdfdoc import _mode2CS, PDFStream, PDFName, PDFArray, PDFImageXObject, asciiBase85Encode, rl_config
 
 
 class IccBasedColorspace:
@@ -53,7 +53,7 @@ def format(self: PDFImageXObject, document):
     dict["Width"] = self.width
     dict["Height"] = self.height
     dict["BitsPerComponent"] = self.bitsPerComponent
-    if type(self.colorSpace) == IccBasedColorspace:
+    if type(self.colorSpace) is IccBasedColorspace:
         dict["ColorSpace"] = self.colorSpace.to_obj()  # type: ignore
     else:
         dict["ColorSpace"] = PDFName(self.colorSpace)

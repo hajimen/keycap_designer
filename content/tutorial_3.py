@@ -33,68 +33,75 @@ def generate():
     pale_red_bc = BackgroundColor(pale_red)
     # You have already seen the legends have surrounding white outlines in the preview.
     # But not all the image is good for it. You can change the color by BackgroundColor object.
-
-    ms[1] @= pale_red_bc
-    # Compare the legends of Normal key and BC key.
-
-    ms[2] @= TopImage(here() / 'starter-kit/02.png', fit=Aspect) @ pale_red_bc
-    # First, ms[2] already contains Image object.
-    # Descriptor object in Manuscript object can be overwritten.
-    # In the case, right object overwrites left object.
-    # Second, look at the color of margin.
-    # fit=Aspect leaves margin as background.
+    # BackgroundColor object also affects margin area and all sides.
+    # It is alike "keycap's color".
 
     rb = Style(
         3.,  # font size by mm
         1.,  # x_loc by mm
         1.,  # y_loc by mm
-        APP_FONT_DIR / 'damase_v.2.ttf',  # font path
+        APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf',  # font path
         h_o=Right, align=Right, v_o=Bottom)
     rb2 = rb.mod(y_loc=4.)
+    front = rb.mod(side=FrontSide)
 
     ms[0] @= Legend({rb: 'Normal'})
-    ms[1] @= Legend({rb: 'BC'})
-    ms[2] @= Legend({rb2: 'Margin', rb: 'BC'})
-    ms[3] @= Legend({rb2: 'Front', rb: 'BC'})
-    ms[4] @= Legend({rb2: 'Front', rb: 'SC'})
-    ms[5] @= Legend({rb: 'Repeat'})
-    ms[6] @= Legend({rb: 'Comment'})
-    ms[7] @= Legend({rb: 'Wallpaper'})
-    ms[8] @= Legend({rb: 'Rotation'})
-    ms[9] @= Legend({rb: 'Relative'})
-    ms[10] @= Legend({rb: 'Perc'})
 
-    front = rb.mod(side=FrontSide)
+    ms[1] @= Legend({rb: 'BC'})
+    ms[1] @= pale_red_bc
+    # Compare the legends of Normal key and BC key.
+
+    ms[2] @= Legend({rb2: 'Aspect', rb: 'BC'})
+    ms[2] @= TopImage(here() / 'starter-kit/02.png', fit=Aspect) @ pale_red_bc
+    # First, ms[2] already contains Image object.
+    # Descriptor object in Manuscript object can be overwritten.
+    # In the case, right object overwrites left object.
+    # Second, look at the color of image padding area.
+    # fit=Aspect leaves image padding area as background.
+
+    ms[3] @= Legend({rb2: 'Front', rb: 'BC'})
     ms[3] @= Legend({front: 'Front'}) @ pale_red_bc
     # ms[2] already contains Legend object. But in this case,
     # two Legend objects are combined into one, not overwritten.
     # Pay attention that BackgroundColor object affects top and front both.
 
+    ms[4] @= Legend({rb2: 'Front', rb: 'SC'})
     ms[4] @= Legend({front: 'Front'}) @ SideColor({FrontSide: pale_red})
     # If you need to restrict the effect into one side, use SideColor object.
     # Please look at gray-ish margin areas too. SideColor object doesn't affect margin area's color.
     # BackgroundColor object does.
 
+    ms[5] @= Legend({rb: 'Repeat'})
     ms[5] @= Repeat(3)
     # You can need multiple keycaps with the same design. Repeat object helps you.
 
+    ms[6] @= Legend({
+        rb.mod(variation_name='Condensed Regular'): 'Comment'
+        # variation_name is for variable fonts.
+    })
     ms[6] @= Comment('foo bar')
     # Comment object is a last resort.
 
+    ms[7] @= Legend({
+        rb.mod(size=2.): 'Wallpaper'
+    })
     ms[7] @= TopImage(here() / 'starter-kit/07.png', fit=Aspect) @ Wallpaper(here() / 'test_pattern.png')
     # Wallpaper() returns BackgroundImage object which does image tiling.
 
+    ms[8] @= Legend({rb: 'Rotation'})
     ms[8] @= Rotation(RotationAngle.CW)
     # In XDA 1u, it is a bit pointless :-)
 
-    ms[9] @= CCI(Relative)
-    # keycap_designer does color management. It is a kind of rocket science.
-    # It is impossible to tell the meaning of color conversion intent here.
-    # The default intent is Perceptual. If you are not satisfied with the color tone,
+    ms[9] @= Legend({rb: 'Relative'})
+    ms[9] @= Relative
+    # keycap_designer does color management. It is alike rocket science.
+    # It is impossible to tell the meaning of "Relative" here.
+    # The default is Perceptual. If you are not satisfied with the color tone,
     # try Relative, RelativeNoBpc, or Saturation.
 
+    ms[10] @= Legend({rb.mod(size=1.5): 'Perceptual'})
     ms[10] @= TopImage(here() / 'starter-kit/09.png', fit=Crop)
-    # To compare color conversion intent.
+    # To compare Relative (ms[9]) and Perceptual (default).
 
     m_supplement = Profile('XDA') @ Specifier('1u') @ Legend({rb: 'Sup'})
     # You can mix Layout and non-Layout Manuscript objects into one preview.

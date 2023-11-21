@@ -13,37 +13,31 @@ def _ap(image_name: str):
 
 cb1u = CapBase({
     TopSide: _ap('1u'),
-    FrontSide: _ap('f1u')
+    FrontSide: _ap('1u-front')
 })
 
 cb125u = CapBase({
     TopSide: _ap('125u'),
-    FrontSide: _ap('f125u')
 })
 
 cb15u = CapBase({
     TopSide: _ap('15u'),
-    FrontSide: _ap('f15u')
 })
 
 cb175u = CapBase({
     TopSide: _ap('175u'),
-    FrontSide: _ap('f175u')
 })
 
 cb2u = CapBase({
     TopSide: _ap('2u'),
-    FrontSide: _ap('f2u')
 })
 
 cb225u = CapBase({
     TopSide: _ap('225u'),
-    FrontSide: _ap('f225u')
 })
 
 cb275u = CapBase({
     TopSide: _ap('275u'),
-    FrontSide: _ap('f275u')
 })
 
 

@@ -1,5 +1,10 @@
 {
+	"python.languageServer":	"Pylance",
+	"python.analysis.typeCheckingMode":	"basic",
 	"python.analysis.include": [],
 	"python.analysis.extraPaths":	["keycap-designer"],
-	"flake8.args": ["--ignore=W293, W504, E402, F821, F403, F405", "--max-line-length", "300"]
+	"flake8.args": ["--ignore=W293, W504, E402, F821, F403, F405", "--max-line-length", "300"],
+	"python.analysis.diagnosticSeverityOverrides": {
+		"reportWildcardImportFromLibrary": "none"
+	}
 }

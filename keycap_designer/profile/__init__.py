@@ -32,12 +32,12 @@ class Aperture(_ApertureImpl):
         oyx = outer_mask.max(axis=0), outer_mask.max(axis=1)
         ab = [(np.argwhere(a).max() + 1, np.argwhere(a).min()) for a in ayx]
         ob = [(np.argwhere(o).max() + 1, np.argwhere(o).min()) for o in oyx]
-        wh = tuple([int(ma - mi) for ma, mi in ab])
-        outer_wh = tuple([int(ma - mi) for ma, mi in ob])
-        offset = tuple([int(mi) for _, mi in ab])
-        outer_offset = tuple([int(mi) for _, mi in ob])
-        mask_center = tuple([int((ms // 2) - mi) for ms, (_, mi) in zip(mask.size, ab)])
-        outer_mask_center = tuple([int((ms // 2) - mi) for ms, (_, mi) in zip(mask.size, ob)])
+        wh = ty.cast(tuple[int, int], tuple([int(ma - mi) for ma, mi in ab]))
+        outer_wh = ty.cast(tuple[int, int], tuple([int(ma - mi) for ma, mi in ob]))
+        offset = ty.cast(tuple[int, int], tuple([int(mi) for _, mi in ab]))
+        outer_offset = ty.cast(tuple[int, int], tuple([int(mi) for _, mi in ob]))
+        mask_center = ty.cast(tuple[int, int], tuple([int((ms // 2) - mi) for ms, (_, mi) in zip(mask.size, ab)]))
+        outer_mask_center = ty.cast(tuple[int, int], tuple([int((ms // 2) - mi) for ms, (_, mi) in zip(mask.size, ob)]))
         super().__init__(mask_path, wh, outer_wh, offset, outer_offset, mask_center, outer_mask_center, mask.size, name)
 
 

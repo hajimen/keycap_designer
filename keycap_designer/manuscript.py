@@ -17,6 +17,9 @@ from keycap_designer.image import alpha_composite, float_uint16, ColorBase, sRGB
 
 
 def here():
+    '''
+    Returns a pathlib.Path object representing the directory which contains the caller's source file.
+    '''
     return Path(os.path.dirname(inspect.stack()[1].filename))
 
 
@@ -27,32 +30,20 @@ class ColorConversionIntent(Enum):
     Saturation = auto()
 
     def rendering_intent(self):
-        return CCI_RI[self]
+        return {
+            ColorConversionIntent.Perceptual: RenderingIntent.Perceptual,
+            ColorConversionIntent.Relative: RenderingIntent.Relative,
+            ColorConversionIntent.RelativeNoBpc: RenderingIntent.Relative,
+            ColorConversionIntent.Saturation: RenderingIntent.Saturation,
+        }[self]
 
     def bpc(self):
-        return CCI_BPC[self]
-
-
-Perceptual = ColorConversionIntent.Perceptual
-Relative = ColorConversionIntent.Relative
-RelativeNoBpc = ColorConversionIntent.RelativeNoBpc
-Saturation = ColorConversionIntent.Saturation
-
-
-CCI_RI = {
-    Perceptual: RenderingIntent.Perceptual,
-    Relative: RenderingIntent.Relative,
-    RelativeNoBpc: RenderingIntent.Relative,
-    Saturation: RenderingIntent.Saturation,
-}
-
-
-CCI_BPC = {
-    Perceptual: False,
-    Relative: True,
-    RelativeNoBpc: False,
-    Saturation: False,
-}
+        return {
+            ColorConversionIntent.Perceptual: False,
+            ColorConversionIntent.Relative: True,
+            ColorConversionIntent.RelativeNoBpc: False,
+            ColorConversionIntent.Saturation: False,
+        }[self]
 
 
 @dataclass(frozen=True)
@@ -80,6 +71,10 @@ class Style:
         Legend's color
     side: Side = TopSide
         Printing side.
+    variation_name: Optional[str] = None
+        The style name of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_name
+    variation_axes: ty.Optional[list[dict[str, ty.Any]]] = None
+        The axes of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_axes
     '''
     size: float
     x_loc: float
@@ -90,6 +85,8 @@ class Style:
     align: Orientation = Left
     color: ColorBase = sRGBColor(0, 0, 0)
     side: Side = TopSide
+    variation_name: ty.Optional[str] = None
+    variation_axes: ty.Optional[list[dict[str, ty.Any]]] = None
 
     def mod(self,
             size: ty.Optional[float] = None,
@@ -100,12 +97,26 @@ class Style:
             v_o: ty.Optional[Orientation] = None,
             align: ty.Optional[Orientation] = None,
             color: ty.Optional[ColorBase] = None,
-            side: ty.Optional[Side] = None):
+            side: ty.Optional[Side] = None,
+            variation_name: ty.Optional[str] = None,
+            variation_axes: ty.Optional[list[dict[str, ty.Any]]] = None):
         '''
         Copies this object, overwrites some properties, and returns the new object.
         '''
         ret = self.__dict__.copy()
-        for n, t in [('color', ColorBase), ('size', float), ('h_o', Orientation), ('v_o', Orientation), ('align', Orientation), ('x_loc', float), ('y_loc', float), ('side', Side), ('font', Path)]:
+        for n, t in [
+                ('size', float),
+                ('x_loc', float),
+                ('y_loc', float),
+                ('font', Path),
+                ('h_o', Orientation),
+                ('v_o', Orientation),
+                ('align', Orientation),
+                ('color', ColorBase),
+                ('side', Side),
+                ('variation_name', str),
+                ('variation_axes', list),
+        ]:
             a = locals()[n]
             if a is not None:
                 if isinstance(a, t):
@@ -249,6 +260,9 @@ class DictCombinable(Descriptor, ty.Generic[K, V]):
 
 
 class Legend(DictCombinable[Style, str]):
+    '''
+    Specifies legends. The key should be Style object.
+    '''
     kv = [Style, str]
     m_name = 'legend'
 
@@ -359,18 +373,32 @@ class Repeat(Overlay[int]):
 
 
 class BackgroundColor(Overlay[ColorBase]):
+    '''
+    Affects to margin area, all sides, and legends' outline color. It is alike "keycap's color".
+    '''
     m_name = 'background_color'
 
 
 class BackgroundImage(Overlay[ImageFile]):
+    '''
+    Specifies image tiling on all sides including their margin area.
+    '''
     m_name = 'background_image'
 
 
 def Wallpaper(path: Path, **kwargs):
+    '''
+    Shorthand of BackgroundImage. kwargs is passed to ImageFile().
+    BackgroundImage specifies image tiling on all sides including their margin area.
+    '''
     return BackgroundImage(ImageFile(path, **kwargs))
 
 
 class SideColor(DictCombinable[Side, ColorBase]):
+    '''
+    Fills a side by a color. Not affects to margin area or legends' outline.
+    See BackgroundColor and Wallpaper for the purpose.
+    '''
     kv = [Side, ColorBase]
     m_name = 'side_color'
 
@@ -392,6 +420,10 @@ class Specifier(Overlay[str]):
 
 
 class Layout(Overlay[str]):
+    '''
+    Specifies layout by KLE JSON file's name. No '.json' in the name.
+    The KLE JSON file should be in ./layout directory.
+    '''
     m_name = 'layout'
 
 
@@ -471,6 +503,12 @@ class Rotation(Overlay[RotationAngle]):
 
 class CCI(Overlay[ColorConversionIntent]):
     m_name = 'cci'
+
+
+Perceptual = CCI(ColorConversionIntent.Perceptual)
+Relative = CCI(ColorConversionIntent.Relative)
+RelativeNoBpc = CCI(ColorConversionIntent.RelativeNoBpc)
+Saturation = CCI(ColorConversionIntent.Saturation)
 
 
 class Skip(Overlay[int]):
@@ -710,7 +748,7 @@ def manuscript_to_artwork(m: Manuscript):
         cb,
         '' if m.group is None else m.group.v,
         comment,
-        rank, side_image, Perceptual if m.cci is None else m.cci.v,
+        rank, side_image, ColorConversionIntent.Perceptual if m.cci is None else m.cci.v,
         1 if m.repeat is None else m.repeat.v,
         '' if m.layout is None else m.layout.v,
         -1 if m.row is None else m.row.v,
@@ -723,7 +761,7 @@ def _get_pil_color(color: ColorBase, alpha: ty.Optional[int] = 255):
         c = color
     else:
         c = sRGBColor(color)
-    t = tuple(int(v) for v in c.values())
+    t = ty.cast(tuple[int, int, int], tuple(int(v) for v in c.values()))
     return t if alpha is None else t + (alpha,)
 
 
@@ -738,8 +776,8 @@ def _get_workspace_color(color: ColorBase):
     return float_uint16(linear_channels[::-1])
 
 
-def _ndarray_to_int_tuple(arr: NDArray):
-    return tuple(arr.astype(int))
+def _ndarray_to_float_tuple(arr: NDArray):
+    return ty.cast(tuple[float, float], tuple(arr.astype(float)))
 
 
 def _draw_style(d: PILImageDrawModule.ImageDraw, style: Style, s: str, w: float, h: float, background_color: ColorBase):
@@ -748,6 +786,15 @@ def _draw_style(d: PILImageDrawModule.ImageDraw, style: Style, s: str, w: float,
 
     psize = int(style.size * DPM)
     font = PILImageFontModule.truetype(str(style.font), psize)
+    if style.variation_name is not None:
+        try:
+            font.set_variation_by_name(style.variation_name)
+        except OSError as e:
+            raise Exception(f'Error: {font.getname()[0]} is not a variable font.') from e
+        except ValueError as e:
+            raise Exception(f'Error: {style.variation_name} is not in the list of style names. Choose from: {", ".join([n.decode() for n in font.get_variation_names()])}') from e
+    if style.variation_axes is not None:
+        font.set_variation_by_axes(style.variation_axes)
     bbox = np.array(font.getbbox(s)) / DPM
     if bbox[2] - bbox[0] > w:
         print("width overflow: " + s)
@@ -770,7 +817,7 @@ def _draw_style(d: PILImageDrawModule.ImageDraw, style: Style, s: str, w: float,
     ])
 
     # surrounding background to readability
-    pil_loc = _ndarray_to_int_tuple(loc * DPM)
+    pil_loc = _ndarray_to_float_tuple(loc * DPM)
     pbc = _get_pil_color(background_color)
     d.text(pil_loc, s, pbc, font, anchor, stroke_width=5)
 

@@ -173,4 +173,4 @@ class ColorConverter:
         return pimg
 
 
-DEFAULT_CC = ColorConverter(ICC_DIR / 'sub20191126_srgb.icc')
+DEFAULT_CC = ColorConverter(ICC_DIR / 'sublinova-epson4pigment-PBT-20231121_srgb.icc')

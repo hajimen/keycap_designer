@@ -3,14 +3,16 @@ from keycap_designer.manuscript import *
 
 def generate():
     '''
-    Let's see the basic patterns of keycap_designer's content script.
+    Let's see the basic patterns of keycap-designer's content script.
     In many cases, you will not need to know more than what is in this file.
 
-    To view the preview, run the app, input 'load tutorial_1', and hit Enter key.
+    Launch the app by `app.bat` or `app.sh`.
+    To view the preview, input 'load tutorial_1' to the app, and hit Enter key.
     To reload and view, just hit Enter key.
     To exit from the app, 'exit'.
 
-    Gray area around printing image is margin area. The area may be trimmed while printing.
+    In preview PDF:
+    Gray area around printing area is margin area. The area may be trimmed while printing.
     '''
     TEST_IMAGE_PATH = here() / 'test_image.png'
     # here() returns a pathlib.Path object representing the directory which contains the caller's source file.
@@ -20,9 +22,12 @@ def generate():
     # Profile and Specifier objects are the mandatory Descriptor objects.
     # By combining Descriptor objects with @ operator, a Manuscript object is made.
 
+    # `m_mandatory` itself is not a valid object for printing because it has no content to print.
+    # The preview becomes "blank keycap found".
+
     # About Specifier:
-    # 1.5 unit (Tab key) is '15u', no period between 1 and 5.
-    # Bump key is 'Homing 1u'.
+    # 1.5 unit (i.e. usual Tab key) is '15u', no period between 1 and 5.
+    # Bump key (usual F and J) is 'Homing 1u'.
 
     m_image = m_mandatory @ TopImage(TEST_IMAGE_PATH)
     # TopImage() returns a Descriptor object which represents a printing image and the printing side.
@@ -50,9 +55,10 @@ def generate():
         # [xy]_loc are the distance from the origin. The origin is specified by [hv]_o and align.
         # The unit is mm.
 
-        font=APP_FONT_DIR / 'damase_v.2.ttf',
+        font=APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf',
         # APP_FONT_DIR is ./font directory.
         # You can use OS_FONT_DIR too.
+        # You can use variable fonts. The 'OpenSans-VariableFont_wdth,wght.ttf' is also a variable font.
 
         h_o=Center,
         align=Center,
@@ -70,14 +76,14 @@ def generate():
     # You can modify Style object by mod().
     # Descriptor / Manuscript objects are immutable. Use returned objects.
 
-    s_left_blue = s_left_blue.shift(x=1., y=1.)
+    s_left_blue_shifted = s_left_blue.shift(x=1., y=1.)
     # Shift() adds [xy] to [xy]_loc.
     # Again: Descriptor / Manuscript objects are immutable. Use returned objects.
 
     m_center_red = m_mandatory @ Legend({s_center_red: 'Red'})
     # Legend()'s arg is a dictionary. Why? The reason is the below.
 
-    m_center_red_left_blue = m_mandatory @ Legend({s_center_red: 'Red', s_left_blue: 'Blue'})
+    m_center_red_left_blue = m_mandatory @ Legend({s_center_red: 'Red', s_left_blue_shifted: 'Blue'})
     # Two styles of legends are here!
 
     m_image_legend = m_image @ Legend({s_center_red: 'Red'})

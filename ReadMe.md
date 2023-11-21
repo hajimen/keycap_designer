@@ -7,10 +7,13 @@ as complete printing-ready data.
 keycap-designer is good for designing keycap sets. A keycap set should have a consistent design across its keycaps.
 keycap-designer helps a lot to make a consistent design.
 So the learning curve may be too steep if you need just one or two keycaps. In that case, please send me the
-printing image file.
+printing image file, without struggling keycap-designer.
 
 keycap-designer requires some knowledge of Python. It makes the artifact from a Python script that you write.
-Look at `content/tutorial_1.py`.
+Look at `content/tutorial_1.py`, `content/tutorial_2.py`, and `content/tutorial_3.py`.
+
+keycap-designer assumes that all keycaps are white. No colored keycaps. (But you can make alike ones with
+Junana profile keycaps.)
 
 ## Requirements
 
@@ -23,16 +26,55 @@ You can manage to do with other OS, but it will be harder than you are guessing 
 
 - [Adobe Acrobat Reader](https://get.adobe.com/jp/reader/)
 
+## Supported profiles and sizes
+
+keycap-designer supports **XDA** and **Junana** profiles.
+
+### XDA
+
+The name "XDA" is not very precise. In keycap-designer, "XDA" is 9.5 mm height. Some shops say 9.3 or 9.2 mm.
+They are identical.
+
+keycap-designer supports:
+
+- 1u
+- 1.25u
+- 1.5u
+- 1.75u
+- 2u
+- 2.25u
+- 2.75u
+
+And can do front-side printing with 1u.
+
+### Junana
+
+Junana is a brand new profile from DecentKeyboards.
+
+- designed for 17mm key pitch, can do with 19mm
+- compatible with MX, Kailh Choc v2, and Gateron Low Profile switches
+- Both convex and concave are available for all sizes
+- can print seamlessly on the all sides
+
+The size variations are:
+
+- 1u
+- 1.5u
+- 2.25u
+
+**CAUTION**: The unit of Junana is 17mm. The 2.25u is almost equivalent to 2u of 19mm pitch.
+
 ## How to start
 
 1. Download the latest ZIP file for your machine from [https://github.com/hajimen/keycap-designer/releases]
 and extract to somewhere you like.
 2. Launch `edit.bat` or `edit.sh`. It should open VSCode.
 3. Launch `app.bat` or `app.sh` in the VSCode terminal.
-4. From VSCode explorer, open `tutorial_1.py`.
-5. In the app, run `load tutorial_1.py`. It should show a preview.
-6. Compare the preview with `tutorial_1.py`.
-7. Modify somewhere of the script, close the preview, and in the app, hit Enter key.
+4. From VSCode explorer, open `content/tutorial_1.py`. This is a content script.
+5. In the app, run `load tutorial_1.py`. It should show a preview PDF.
+6. Compare the preview PDF with `tutorial_1.py`.
+7. Modify somewhere of the script, close the preview PDF, and in the app, hit Enter key. It should show new preview.
+8. Repeat modify-close-preview and grab the way.
 
 ## Content script: At a glance
 

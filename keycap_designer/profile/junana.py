@@ -1,3 +1,4 @@
+import typing as ty
 from collections import abc
 import numpy as np
 from numpy.typing import NDArray
@@ -81,8 +82,8 @@ def anti_deform(cb: CapBase, img: NDArray[np.uint16]):
 
         tf = PiecewiseAffineTransform()
         tf.estimate(dst, src)
-        src_shape = tuple(src.max(axis=0)[::-1].astype(int))
-        dst_shape = tuple(dst.max(axis=0)[::-1].astype(int))
+        src_shape = ty.cast(tuple[int, int], tuple(src.max(axis=0)[::-1].astype(int)))
+        dst_shape = ty.cast(tuple[int, int], tuple(dst.max(axis=0)[::-1].astype(int)))
         ANTI_DEFORM_CACHE[name] = (tf, src_shape, dst_shape)
 
     front_aperture = cb[FrontSide]

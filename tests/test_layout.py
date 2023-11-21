@@ -1,3 +1,6 @@
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import unittest
 from keycap_designer.constants import CURRENT_DIR
 from keycap_designer.preview import print_rc_map, print_preview

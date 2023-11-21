@@ -50,7 +50,7 @@ def generate():
         3.,  # font size by mm
         1.,  # x_loc by mm
         1.,  # y_loc by mm
-        APP_FONT_DIR / 'damase_v.2.ttf',  # font path
+        APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf',  # font path
         h_o=Right, align=Right, v_o=Bottom)
 
     rb2 = rb.mod(y_loc=4.)

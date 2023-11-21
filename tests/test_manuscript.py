@@ -2,7 +2,7 @@ import unittest
 from keycap_designer.manuscript import *
 
 
-FONT_PATH = Path(APP_FONT_DIR / 'damase_v.2.ttf')
+FONT_PATH = Path(APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf')
 
 
 class TestManuscript(unittest.TestCase):
