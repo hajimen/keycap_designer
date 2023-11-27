@@ -1,15 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
 
-datas = []
-binaries = []
-hiddenimports = []
-tmp_ret = collect_all('cmm')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('frozendict')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-
-datas += [
+datas = [
     ('../keycap_designer/area/xda/*', 'keycap_designer/area/xda/'),
     ('../keycap_designer/area/junana/*', 'keycap_designer/area/junana/'),
     ('../keycap_designer/icc/*', 'keycap_designer/icc/'),
@@ -20,32 +11,26 @@ datas += [
 ]
 
 
-block_cipher = None
-
-
 a = Analysis(
     ['../keycap_designer/__main__.py'],
     pathex=[],
-    binaries=binaries,
+    binaries=[],
     datas=datas,
-    hiddenimports=hiddenimports,
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=True,
+    noarchive=False,
+    module_collection_mode={'ordered_enum': 'py+pyz'},
 )
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
     exclude_binaries=True,
     name='keycap-designer',
@@ -64,7 +49,6 @@ exe = EXE(
 coll = COLLECT(
     exe,
     a.binaries,
-    a.zipfiles,
     a.datas,
     strip=False,
     upx=True,

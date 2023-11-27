@@ -21,6 +21,12 @@ Junana profile keycaps.)
 
 You can manage to do with other OS, but it will be harder than you are guessing now, I guess.
 
+- Python 3.11
+
+Windows: Download from [python.org](https://www.python.org/downloads/)
+
+Mac: I recommend [Homebrew](https://brew.sh/)
+
 - [Visual Studio Code (VSCode)](https://code.visualstudio.com/) and its
 [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
 
@@ -63,6 +69,8 @@ The size variations are:
 - 2.25u
 
 **CAUTION**: The unit of Junana is 17mm. The 2.25u is almost equivalent to 2u of 19mm pitch.
+
+More details: [DecentKeyboards](https://www.etsy.com/shop/DecentKeyboards)
 
 ## How to start
 

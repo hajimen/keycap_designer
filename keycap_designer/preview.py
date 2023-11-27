@@ -32,7 +32,7 @@ PAPER_WIDTH = 297.
 MARGIN = 10.
 LIVE_WIDTH = PAPER_WIDTH - MARGIN * 2
 LIVE_HEIGHT = 190.
-pdfmetrics.registerFont(TTFont("Damase", str(DESC_FONT_PATH)))
+pdfmetrics.registerFont(TTFont("OpenSans", str(DESC_FONT_PATH)))
 DEFAULT_PITCH = 19.
 SIMULATE_ANTI_BLEED = False
 
@@ -134,10 +134,10 @@ def print_rc_map(kle_json_filepath: Path, rc_map_filepath: Path, unit_test=False
     if h * pitch > LIVE_HEIGHT - 15.:
         pitch = (LIVE_HEIGHT - 15.) / h
 
-    doc.canvas.setFont('Damase', 7 * mm)
+    doc.canvas.setFont('OpenSans', 7 * mm)
     doc.canvas.drawCentredString((LIVE_WIDTH / 2) * mm, (LIVE_HEIGHT - 10.) * mm, 'RC map: ' + kle_json_filepath.stem)
     doc.canvas.translate(((LIVE_WIDTH - w * pitch) / 2) * mm, ((LIVE_HEIGHT - 15. - h * pitch) / 2) * mm)
-    doc.canvas.setFont('Damase', (pitch / 3) * mm)
+    doc.canvas.setFont('OpenSans', (pitch / 3) * mm)
     d = shapes.Drawing()
     for (r, c), (vs, angle) in kle_map.items():
         vs = np.array([0., h]) + np.array([1., -1.]) * (vs - kle_lt)
@@ -214,12 +214,12 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
         inv_mag_percent = int(np.ceil(100 / mag))
         mag = 100 / inv_mag_percent
 
-        doc.canvas.setFont('Damase', 3 * mm)
+        doc.canvas.setFont('OpenSans', 3 * mm)
         for side in sorted(sides):
             if not first_page:
                 doc.canvas.showPage()
                 doc.init_page()
-            doc.canvas.setFont('Damase', 7 * mm)
+            doc.canvas.setFont('OpenSans', 7 * mm)
             details = [f'profile: {jig_prof.name}']
             if group != "":
                 details.append(f'group: {group}')
@@ -231,7 +231,7 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
             doc.canvas.translate(((LIVE_WIDTH - w * pitch * mag) / 2) * mm, ((LIVE_HEIGHT - 15. - h * pitch * mag) / 2) * mm)
             doc.canvas.scale(mag, mag)
             COMMENT_REPEAT_FONT_SIZE = 2
-            doc.canvas.setFont('Damase', COMMENT_REPEAT_FONT_SIZE * mm)
+            doc.canvas.setFont('OpenSans', COMMENT_REPEAT_FONT_SIZE * mm)
             first_page = False
             d = shapes.Drawing()
             for (r, c), (vs, angle) in kle_map.items():
@@ -281,8 +281,8 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
          ('BOX', (0, 0), (-1, -1), 2, colors.black)]
     )
     ps = ParagraphStyle('foo', **{
-        "fontName": "Damase",
-        "fontSize": 3 * mm,
+        "fontName": "OpenSans",
+        "fontSize": 2.5 * mm,
         "leading": 4 * mm,
         'alignment': TA_CENTER
     })
@@ -300,7 +300,7 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
         nl_aws = sorted(nl_aws, key=lambda x: x.rank)
 
         def _draw_caption(continued: bool):
-            doc.canvas.setFont('Damase', 5 * mm)
+            doc.canvas.setFont('OpenSans', 5 * mm)
             details = [f'profile: {jig_prof.name}']
             if group != "":
                 details.append(f'group: {group}')
@@ -421,7 +421,7 @@ class Document:
         self.canvas.setPageSize(((LIVE_WIDTH + MARGIN * 2) * mm, (LIVE_HEIGHT + MARGIN * 2) * mm))
         self.canvas.translate(MARGIN * mm, MARGIN * mm)
         self.canvas.saveState()
-        self.canvas.setFont('Damase', 5 * mm)
+        self.canvas.setFont('OpenSans', 5 * mm)
         self.canvas.drawRightString(LIVE_WIDTH * mm, (LIVE_HEIGHT - 5.) * mm, self.timestamp + f'   #{self.i_page + 1}')
         self.i_page += 1
 
