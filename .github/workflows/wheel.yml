@@ -36,8 +36,8 @@ jobs:
     runs-on: ubuntu-latest
 
     environment:
-      name: testpypi
-      url: https://test.pypi.org/p/keycap-designer
+      name: pypi
+      url: https://pypi.org/p/keycap-designer
 
     permissions:
       id-token: write
@@ -48,7 +48,5 @@ jobs:
       with:
         name: whl
         path: dist/
-    - name: Publish distribution 📦 to TestPyPI
+    - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
