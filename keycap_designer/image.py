@@ -215,7 +215,7 @@ def AdobeRGBColor(*args):
 
 def DeviceRGBColor(*args):
     '''
-    Returns a ColorBase object.
+    Returns a ColorBase object. Always use with `Relative`.
 
     Parameters
     ----------
@@ -232,6 +232,7 @@ def DeviceRGBColor(*args):
 
     tmp = ColorBase(_sRGBColorSpace, *args)
     source = ty.cast(NDArray[np.uint16], tmp.values()[::-1].astype(np.uint16) * 257)
-    ws = DEFAULT_CC.device_rgb_as_cv2_to_workspace(source.reshape(1, 1, 3)).reshape(3)
+    ws = DEFAULT_CC.device_rgb_as_cv2_to_workspace(source.reshape(1, 1, 3))
+    srgb = DEFAULT_CC.workspace_to_srgb_as_cv2(ws)
 
-    return ColorBase(_DisplayP3ColorSpace, *tuple(ws // 257))
+    return ColorBase(_sRGBColorSpace, *tuple(srgb.reshape((3,))))

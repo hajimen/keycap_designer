@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.4] - 2025-06-24
+
+- Bug fix: `DeviceRGBColor` should be used with `Relative`.
+
 ## [0.1.3] - 2025-06-24
 
 - The common use scenario has been changed to pip based.

@@ -106,7 +106,7 @@ class ColorConverter:
 
     def device_rgb_as_cv2_to_workspace(self, device_rgb_img: NDArray[np.uint16]) -> NDArray[np.uint16]:
         trg_img = np.zeros(device_rgb_img.shape, dtype=np.uint16)
-        tr = self._get_transform(_ColorConversionType(_ColorSpaceType.DEVICE_RGB_16, _ColorSpaceType.WORKSPACE, False), RenderingIntent.Relative)
+        tr = self._get_transform(_ColorConversionType(_ColorSpaceType.DEVICE_RGB_16, _ColorSpaceType.WORKSPACE, True), RenderingIntent.Relative)
         cmm.do_transform_16_16(tr, cv2.cvtColor(device_rgb_img, cv2.COLOR_BGR2RGB), trg_img, device_rgb_img.size // 3)
         return cv2.cvtColor(trg_img, cv2.COLOR_RGB2BGR)  # type: ignore
 

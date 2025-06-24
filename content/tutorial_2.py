@@ -27,9 +27,10 @@ def generate():
     ms: list[Manuscript] = []
     # ms becomes the return value of this function.
 
-    m = Profile('XDA') @ Specifier('1u') @ Layout('p2ppcb-starter-kit')
+    m = Profile('XDA') @ Specifier('1u') @ Layout('p2ppcb-starter-kit') @ Relative
     # We already have seen Profile and Specifier objects in tutorial_1.py.
     # Layout object corresponds to a KLE JSON file in ./layout folder.
+    # Relative is required for DeviceRGBColor.
 
     for i in range(11):
         ms.append(m @ TopImage(here() / f'starter-kit/{i:0>2}.png', fit=Crop))

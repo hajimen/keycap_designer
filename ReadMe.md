@@ -179,7 +179,7 @@ This represents the limit of printable colors. The saturation limit of printable
 The saturation of those colors are truncated to printable colors. The preview image simulates printed colors.
 Yes, keycap-designer implements ICC color management.
 
-If you need the most saturated printable colors, use `DeviceRGBColor` instead of `sRGBColor` like shown in `tutorial_2.py`.
+If you need the most saturated printable colors, use `DeviceRGBColor` with `Relative` instead of `sRGBColor` like shown in `tutorial_2.py`.
 For images, use `Relative`, `RelativeNoBpc`, or `Saturation` like shown in `tutorial_3.py`.
 The default is `Perceptual`.
 
