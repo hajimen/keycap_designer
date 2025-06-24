@@ -42,6 +42,6 @@ class TestPreview(unittest.TestCase):
         ms.append(m2 @ Specifier('175u'))
         ms.append(m2 @ Specifier('2u'))
         ms.append(m2 @ Specifier('225u'))
-        ms.extend([m2 @ Specifier('275u') @ Repeat(3) @ Comment(f'Lorem Ipsum {9 - i}') for i in range(9)])
+        ms.extend([m2 @ Specifier('275u') @ Repeat(3) @ Comment(f'Lorem Ipsum {9 - i}') for i in range(21)])
         print_preview([manuscript_to_artwork(i) for i in ms], PREVIEW_FILE, True)
         assert_pdf(self, PREVIEW_FILE, 'test_preview')

@@ -29,7 +29,7 @@ def generate():
     if len(ms) != 11:
         raise Exception('Bad code.')
 
-    pale_red = sRGBColor(255, 180, 180)
+    pale_red = sRGBColor('#FFB4B4')
     pale_red_bc = BackgroundColor(pale_red)
     # You have already seen the legends have surrounding white outlines in the preview.
     # But not all the image is good for it. You can change the color by BackgroundColor object.

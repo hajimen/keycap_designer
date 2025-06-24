@@ -6,17 +6,15 @@ def generate():
     Let's see the basic patterns of keycap-designer's content script.
     In many cases, you will not need to know more than what is in this file.
 
-    Launch the app by `app.bat` or `app.sh`.
-    To view the preview, input 'load tutorial_1' to the app, and hit Enter key.
-    To reload and view, just hit Enter key.
-    To exit from the app, 'exit'.
+    From VSCode, hit F5 key. Preview PDF will appear.
+    You can set breakpoints in this script file.
 
-    In preview PDF:
-    Gray area around printing area is margin area. The area may be trimmed while printing.
+    In the preview PDF,
+    gray area around printing area is margin area. The area may be trimmed while printing.
     '''
     TEST_IMAGE_PATH = here() / 'test_image.png'
-    # here() returns a pathlib.Path object representing the directory which contains the caller's source file.
-    # In other words, 'test_image.png' should be in the same directory with this file.
+    # here() returns a pathlib.Path object representing the folder which contains the caller's source file.
+    # In other words, 'test_image.png' should be in the same folder with this file.
 
     m_mandatory = Profile('XDA') @ Specifier('1u')
     # Profile and Specifier objects are the mandatory Descriptor objects.
@@ -31,7 +29,7 @@ def generate():
 
     m_image = m_mandatory @ TopImage(TEST_IMAGE_PATH)
     # TopImage() returns a Descriptor object which represents a printing image and the printing side.
-    # You can combine a Manuscript object with a Descriptor object by @ operator and make a Manuscript object.
+    # You can combine a Manuscript object with a Descriptor object by @ operator and make another Manuscript object.
 
     m_image_crop = m_mandatory @ TopImage(TEST_IMAGE_PATH, fit=Crop)
     # m_image's printing result is portrait and leaves margin to the left and right.
@@ -43,8 +41,8 @@ def generate():
     # of edges to get high-fidelity result. So don't care about rescaling, and just use
     # the most convenient resolution.
 
-    red = sRGBColor(255, 0, 0)  # Namely #FF0000.
-    blue = sRGBColor(0, 0, 255)  # Namely #0000FF.
+    red = sRGBColor('#FF0000')  # You can write this as `sRGBColor(255, 0, 0)`.
+    blue = sRGBColor('#0000FF')
 
     s_center_red = Style(
         size=4.5,
@@ -56,7 +54,7 @@ def generate():
         # The unit is mm.
 
         font=APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf',
-        # APP_FONT_DIR is ./font directory.
+        # APP_FONT_DIR is ./font folder.
         # You can use OS_FONT_DIR too.
         # You can use variable fonts. The 'OpenSans-VariableFont_wdth,wght.ttf' is also a variable font.
 
@@ -64,6 +62,7 @@ def generate():
         align=Center,
         v_o=Center,
         # Layout to center of the printable area.
+        # h denotes 'horizontal', v denotes 'vertical', and o denotes 'origin'.
 
         color=red,
         # Legend's color.

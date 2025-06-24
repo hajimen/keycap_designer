@@ -3,6 +3,7 @@ from keycap_designer.manuscript import *
 
 
 FONT_PATH = Path(APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf')
+OUTPUT_DIR = CURRENT_DIR / 'tmp'
 
 
 class TestManuscript(unittest.TestCase):
@@ -70,8 +71,20 @@ class TestManuscript(unittest.TestCase):
         aws = [manuscript_to_artwork(i) for i in ms]
         for i, aw in enumerate(aws):
             img = (aw.side_image[TopSide] // 257).astype(np.uint8)
-            oracle = cv2.imread(str(CURRENT_DIR / f'tests/oracle/test_manuscript_to_artwork_{i}.png'), cv2.IMREAD_UNCHANGED)
-            self.assertTrue(np.all(img == oracle))
+            op = CURRENT_DIR / f'tests/oracle/test_manuscript_to_artwork_{i}.png'
+            oracle = cv2.imread(str(op), cv2.IMREAD_UNCHANGED)
+            if not np.all(img == oracle):
+                import PIL.Image as PILImageModule
+                from keycap_designer.color_management import ICC_DIR
+                pi = PILImageModule.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
+                WORKSPACE_PROFILE_FILENAME = 'Linear P3D65.icc'
+                with open(ICC_DIR / WORKSPACE_PROFILE_FILENAME, 'rb') as f:
+                    pi.info['icc_profile'] = f.read()
+                rp = OUTPUT_DIR / f'test_result/test_manuscript_to_artwork_{i}.png'
+                if not rp.parent.exists():
+                    rp.parent.mkdir()
+                pi.save(rp)
+                self.fail(f'Oracle and result differ. Compare {CURRENT_DIR / f"tests/oracle/test_manuscript_to_artwork_{i}.png"} with {rp}')
             # import PIL.Image as PILImageModule
             # pi = PILImageModule.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
             # # pi.show()
@@ -79,4 +92,4 @@ class TestManuscript(unittest.TestCase):
             # WORKSPACE_PROFILE_FILENAME = 'Linear P3D65.icc'
             # with open(ICC_DIR / WORKSPACE_PROFILE_FILENAME, 'rb') as f:
             #     pi.info['icc_profile'] = f.read()
-            # pi.save(CURRENT_DIR / f'tests/oracle/test_manuscript_to_artwork_{i}.png')
+            # pi.save(op)

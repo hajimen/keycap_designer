@@ -13,8 +13,8 @@ def generate():
     style = Style(2, 1, 1., APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf')
     front = style.mod(x_loc=1.5, y_loc=1.5, side=FrontSide)
 
-    pale_red = sRGBColor(255, 180, 180)
-    pale_blue = sRGBColor(180, 180, 255)
+    pale_red = sRGBColor('#FFB4B4')
+    pale_blue = sRGBColor('#B4B4FF')
 
     ms.append(m @ Legend({style: 'BC'}) @ BackgroundColor(pale_red))
     # BackgroundColor object affects all five sides.

@@ -13,16 +13,21 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter, PathCompleter
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
+from prompt_toolkit.shortcuts import yes_no_dialog
 
-from keycap_designer.constants import CURRENT_DIR
+from keycap_designer.constants import CURRENT_DIR, RESOURCE_DIR
 from keycap_designer.manuscript import manuscript_to_artwork
 from keycap_designer.preview import print_rc_map, print_preview
 
 
 CONTENT_DIR_NAME = 'content'
+FONT_DIR_NAME = 'font'
 LAYOUT_DIR_NAME = 'layout'
+VSCODE_DIR_NAME = '.vscode'
 CONTENT_DIR = CURRENT_DIR / CONTENT_DIR_NAME
 OUTPUT_DIR = CURRENT_DIR / 'tmp'
+REPO_DIR_NAMES = [CONTENT_DIR_NAME, FONT_DIR_NAME, LAYOUT_DIR_NAME]
+REPO_DIRS = [CURRENT_DIR / d for d in REPO_DIR_NAMES]
 MODULE = None
 IMPORTED_MODULE_D: dict[str, ty.Any] = {}
 
@@ -164,7 +169,7 @@ def pump():
 
     message.append(('class:pound', '# '))
 
-    text: str = session.prompt(message, completer=root_completer)
+    text: str = session.prompt(message, completer=root_completer, bottom_toolbar='To exit this app, type "exit" and hit Enter key.')
 
     if text == 'show':
         show_preview()
@@ -194,10 +199,51 @@ exit:
     return True
 
 
+def repo_ok():
+    if not OUTPUT_DIR.is_dir():
+        if not remove_file_if_exists(OUTPUT_DIR):
+            print(f'Error: Cannot remove {OUTPUT_DIR} file. Please remove the file by yourself.')
+            sys.exit(1)
+        OUTPUT_DIR.mkdir()
+
+    if all(d.is_dir() for d in REPO_DIRS + [CURRENT_DIR / VSCODE_DIR_NAME]):
+        return True
+
+    result = yes_no_dialog(
+        title="keycap-designer",
+        text="Do you initialize current directory for keycap-designer?"
+    ).run()
+
+    if result:
+        import shutil
+        for n, d in zip(REPO_DIR_NAMES, REPO_DIRS):
+            shutil.copytree(RESOURCE_DIR / 'repo' / n, d, dirs_exist_ok=True)
+        shutil.copytree(RESOURCE_DIR / 'repo/vscode', CURRENT_DIR / VSCODE_DIR_NAME, dirs_exist_ok=True)
+
+    return result
+
+
 def main():
     from keycap_designer import version
-    print(f'keycap-designer {version} (C) 2023 DecentKeyboards; MIT License')
+    print(f'keycap-designer {version} (C) 2023-2025 DecentKeyboards; MIT License')
+    if not repo_ok():
+        return
+    if len(sys.argv) > 1:
+        v = sys.argv[1]
+        try:
+            vp = Path(v)
+        except Exception:
+            print('Error: The arg {v} is not a valid file path.')
+            sys.exit(1)
+        try:
+            rp = vp.relative_to(CONTENT_DIR)
+        except Exception:
+            print('Error: The file {v} is not in ./content folder.')
+            sys.exit(1)
+        load('load ' + str(rp))
+        
     sys.path.append(os.getcwd())
+    print('Type "help" and hit Enter key to show the command help.')
     while True:
         cont = pump()
         if not cont:

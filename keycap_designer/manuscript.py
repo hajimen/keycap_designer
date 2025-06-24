@@ -13,17 +13,20 @@ import cv2
 from keycap_designer.constants import *
 from keycap_designer.profile import CapBase, PROFILES, Profile as JigProfile
 from keycap_designer.color_management import DEFAULT_CC, RenderingIntent
-from keycap_designer.image import alpha_composite, float_uint16, ColorBase, sRGBColor, DisplayP3Color
+from keycap_designer.image import alpha_composite, float_uint16, ColorBase, sRGBColor, DisplayP3Color, DeviceRGBColor  # noqa
 
 
 def here():
     '''
-    Returns a pathlib.Path object representing the directory which contains the caller's source file.
+    Returns a pathlib.Path object representing the folder which contains the caller's source file.
     '''
     return Path(os.path.dirname(inspect.stack()[1].filename))
 
 
 class ColorConversionIntent(Enum):
+    '''
+    Intent of ICC profile colorspace conversion.
+    '''
     Perceptual = auto()
     Relative = auto()
     RelativeNoBpc = auto()
@@ -62,18 +65,21 @@ class Style:
     font: pathlib.Path
         Font path.
     h_o: Orientation = Left
-        If ``Right``, the layout is right justification and ``x_loc`` means the distance from right edge. ``Center`` is available too.
+        If ``Right``, the layout coordinate system is horizontally mirrored. ``x_loc`` means the distance from the right edge.
+        ``Center`` is available too. In the case, the layout coordinate origin is placed at the center of the layout area.
     v_o: Orientation = Top
-        If ``Bottom``, the legend comes into the bottom of printable area. ``Center`` is available too.
+        If ``Bottom``, the layout coordinate system is vertically mirrored. ``y_loc`` means the distance from the bottom edge.
+        ``Center`` is available too. In the case, the layout coordinate origin is placed at the center of the layout area.
     align: Orientation = Left
-        If ``Center``, the origin comes into the horizontal center of the legend.
-    color: ColorBase = sRGBColor(0, 0, 0)
-        Legend's color
+        If ``Center``, the legend placing point comes into the horizontal center of the legend area.
+        No way to specify vertical center. 'Vertical center' of latin alphabet is a problematic idea.
+    color: ColorBase = sRGBColor('#000000')
+        Legend's color.
     side: Side = TopSide
         Printing side.
-    variation_name: Optional[str] = None
+    variation_name: str | None = None
         The style name of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_name
-    variation_axes: ty.Optional[list[dict[str, ty.Any]]] = None
+    variation_axes: abc.Iterable[float] | None = None
         The axes of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_axes
     '''
     size: float
@@ -83,25 +89,50 @@ class Style:
     h_o: Orientation = Left
     v_o: Orientation = Top
     align: Orientation = Left
-    color: ColorBase = sRGBColor(0, 0, 0)
+    color: ColorBase = sRGBColor('#000000')
     side: Side = TopSide
-    variation_name: ty.Optional[str] = None
-    variation_axes: ty.Optional[list[dict[str, ty.Any]]] = None
+    variation_name: str | None = None
+    variation_axes: abc.Iterable[float] | None = None
 
     def mod(self,
-            size: ty.Optional[float] = None,
-            x_loc: ty.Optional[float] = None,
-            y_loc: ty.Optional[float] = None,
-            font: ty.Optional[Path] = None,
-            h_o: ty.Optional[Orientation] = None,
-            v_o: ty.Optional[Orientation] = None,
-            align: ty.Optional[Orientation] = None,
-            color: ty.Optional[ColorBase] = None,
-            side: ty.Optional[Side] = None,
-            variation_name: ty.Optional[str] = None,
-            variation_axes: ty.Optional[list[dict[str, ty.Any]]] = None):
+            size: float | None = None,
+            x_loc: float | None = None,
+            y_loc: float | None = None,
+            font: Path | None = None,
+            h_o: Orientation | None = None,
+            v_o: Orientation | None = None,
+            align: Orientation | None = None,
+            color: ColorBase | None = None,
+            side: Side | None = None,
+            variation_name: str | None = None,
+            variation_axes: abc.Iterable[float] | None = None):
         '''
         Copies this object, overwrites some properties, and returns the new object.
+
+        Parameters
+        ----------
+        size: float | None = None
+            Font size by mm.
+        x_loc: float | None = None
+            Horizontal distance from the origin. See ``h_o`` and ``align`` too. The unit is mm.
+        y_loc: float | None = None
+            Vertical distance from the origin. See ``v_o`` too. The unit is mm.
+        font: pathlib.Path | None = None
+            Font path.
+        h_o: Orientation | None = None
+            If ``Right``, the layout is right justification and ``x_loc`` means the distance from right edge. ``Center`` is available too.
+        v_o: Orientation | None = None
+            If ``Bottom``, the legend comes into the bottom of printable area. ``Center`` is available too.
+        align: Orientation | None = None
+            If ``Center``, the origin comes into the horizontal center of the legend.
+        color: ColorBase | None = None
+            Legend's color
+        side: Side | None = None
+            Printing side.
+        variation_name: str | None = None
+            The style name of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_name
+        variation_axes: abc.Iterable[float] | None = None
+            The axes of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_axes
         '''
         ret = self.__dict__.copy()
         for n, t in [
@@ -115,7 +146,7 @@ class Style:
                 ('color', ColorBase),
                 ('side', Side),
                 ('variation_name', str),
-                ('variation_axes', list),
+                ('variation_axes', abc.Iterable),
         ]:
             a = locals()[n]
             if a is not None:
@@ -128,6 +159,12 @@ class Style:
     def shift(self, x=0., y=0.):
         '''
         Copies this object, adds [xy] from [xy]_loc, and returns the new object.
+        
+        Parameters
+        ----------
+        x: float = 0.
+        y: float = 0.
+            The unit is mm.
         '''
         ret = self.__dict__.copy()
         ret['x_loc'] += x
@@ -137,6 +174,20 @@ class Style:
 
 @dataclass
 class ImageFile:
+    '''
+    Specifies an image file and its image processing policy.
+
+    Parameters
+    ----------
+    path: pathlib.Path
+        Image file path.
+    fit : ImageFit = Aspect
+        `Aspect`, `Crop`, `Expand`, or `PixelWise`.
+    interpolate : ImageInterpolate = Cubic
+        `Cubic` or `Nearest`.
+    trim : ImageTrim = TrimInner
+        `TrimInner` or `TrimOuter`.
+    '''
     path: Path
     fit: ImageFit = Aspect
     interpolate: ImageInterpolate = Cubic
@@ -144,7 +195,7 @@ class ImageFile:
 
 
 MDT = ty.Union['Manuscript', 'Descriptor']
-MDST = abc.Sequence[ty.Union['Manuscript', 'Descriptor']]
+MDST = abc.Sequence[MDT]
 
 
 def _manuscript_matmul(self: 'Descriptor', r, synth: bool):
@@ -179,22 +230,22 @@ class Descriptor:
 
 @dataclass
 class Manuscript:
-    background_color: ty.Optional['BackgroundColor'] = None
-    profile: ty.Optional['Profile'] = None
-    specifier: ty.Optional['Specifier'] = None
-    layout: ty.Optional['Layout'] = None
-    row: ty.Optional['Row'] = None
-    col: ty.Optional['Col'] = None
-    comment: ty.Optional['Comment'] = None
-    group: ty.Optional['Group'] = None
-    legend: ty.Optional['Legend'] = None
-    image: ty.Optional['Image'] = None
-    repeat: ty.Optional['Repeat'] = None
-    rotation: ty.Optional['Rotation'] = None
-    background_image: ty.Optional['BackgroundImage'] = None
-    cci: ty.Optional['CCI'] = None
-    side_color: ty.Optional['SideColor'] = None
-    skip: ty.Optional['Skip'] = None
+    background_color: 'BackgroundColor | None' = None
+    profile: 'Profile | None' = None
+    specifier: 'Specifier | None' = None
+    layout: 'Layout | None' = None
+    row: 'Row | None' = None
+    col: 'Col | None' = None
+    comment: 'Comment | None' = None
+    group: 'Group | None' = None
+    legend: 'Legend | None' = None
+    image: 'Image | None' = None
+    repeat: 'Repeat | None' = None
+    rotation: 'Rotation | None' = None
+    background_image: 'BackgroundImage | None' = None
+    cci: 'CCI | None' = None
+    side_color: 'SideColor | None' = None
+    skip: 'Skip | None' = None
 
     def dict(self):
         return {k: v for k, v in self.__dict__.items() if v is not None}
@@ -230,13 +281,13 @@ V = ty.TypeVar('V')
 class DictCombinable(Descriptor, ty.Generic[K, V]):
     kv: list[type] = []
 
-    def __init__(self, d: ty.Optional[ty.Dict[K, V]] = None) -> None:
+    def __init__(self, d: dict[K, V] | None = None) -> None:
         self.d: dict[K, V] = {} if d is None else d
 
-    def __matmul__(self, r: ty.Union[tuple, MDT]):
+    def __matmul__(self, r: tuple | MDT):
         return _manuscript_matmul(self, r, isinstance(r, tuple))
 
-    def __mod__(self, r: ty.Union[tuple, 'Descriptor']):
+    def __mod__(self, r: 'tuple | Descriptor'):
         ret = self.d.copy()
         if isinstance(r, type(self)):
             ret.update(r.d)
@@ -261,7 +312,7 @@ class DictCombinable(Descriptor, ty.Generic[K, V]):
 
 class Legend(DictCombinable[Style, str]):
     '''
-    Specifies legends. The key should be Style object.
+    Specifies legends. The key should be a Style object, and the value should be a legend str.
     '''
     kv = [Style, str]
     m_name = 'legend'
@@ -274,32 +325,36 @@ class Image(DictCombinable[Side, ImageFile]):
 
 def TopImage(path: Path, fit: ImageFit = Aspect, interpolate: ImageInterpolate = Cubic, trim: ImageTrim = TrimInner):
     '''
-    Prints image file on top-side.
+    Specifies an image file printing on top and its image processing policy.
 
+    Parameters
+    ----------
     path : pathlib.Path
-        image file path.
-    fit : ImageFit
-        Aspect (default), Crop, Expand, or PixelWise.
-    interpolate : ImageInterpolate
-        Cubic (default) or Nearest.
-    trim : ImageTrim
-        TrimInner(default) or TrimOuter.
+        Image file path.
+    fit : ImageFit = Aspect
+        `Aspect`, `Crop`, `Expand`, or `PixelWise`.
+    interpolate : ImageInterpolate = Cubic
+        `Cubic` or `Nearest`.
+    trim : ImageTrim = TrimInner
+        `TrimInner` or `TrimOuter`.
     '''
     return Image({TopSide: ImageFile(path, fit, interpolate, trim)})
 
 
 def FrontImage(path: Path, fit: ImageFit = Aspect, interpolate: ImageInterpolate = Cubic, trim: ImageTrim = TrimInner):
     '''
-    Prints image file on front-side.
+    Specifies an image file printing on front-side and its image processing policy.
 
+    Parameters
+    ----------
     path : pathlib.Path
-        image file path.
-    fit : ImageFit
-        Aspect (default), Crop, Expand, or PixelWise.
-    interpolate : ImageInterpolate
-        Cubic (default) or Nearest.
-    trim : ImageTrim
-        TrimInner(default) or TrimOuter.
+        Image file path.
+    fit : ImageFit = Aspect
+        `Aspect`, `Crop`, `Expand`, or `PixelWise`.
+    interpolate : ImageInterpolate = Cubic
+        `Cubic` or `Nearest`.
+    trim : ImageTrim = TrimInner
+        `TrimInner` or `TrimOuter`.
     '''
     return Image({FrontSide: ImageFile(path, fit, interpolate, trim)})
 
@@ -330,10 +385,16 @@ class StrCombinable(Descriptor):
 
 
 class Comment(StrCombinable):
+    '''
+    Adds comment. Shown in preview.
+    '''
     m_name = 'comment'
 
 
 class Group(StrCombinable):
+    '''
+    Adds group. Shown in preview.
+    '''
     m_name = 'group'
 
 
@@ -359,6 +420,9 @@ class Overlay(Descriptor, ty.Generic[V]):
 
 
 class Repeat(Overlay[int]):
+    '''
+    Denotes a number of same keycaps by a Manuscript object.
+    '''
     m_name = 'repeat'
 
     def __mod__(self, r: 'Descriptor'):
@@ -422,12 +486,12 @@ class Specifier(Overlay[str]):
 class Layout(Overlay[str]):
     '''
     Specifies layout by KLE JSON file's name. No '.json' in the name.
-    The KLE JSON file should be in ./layout directory.
+    The KLE JSON file should be in ./layout folder.
     '''
     m_name = 'layout'
 
 
-def _pow_rc(self: ty.Union['Row', 'Col'], r: MDST):
+def _pow_rc(self: 'Row | Col', r: MDST):
     skip_offset = 0
     ret: list[MDT] = []
     for i, v in enumerate(r):
@@ -441,6 +505,9 @@ def _pow_rc(self: ty.Union['Row', 'Col'], r: MDST):
 
 
 class Row(Overlay[int]):
+    '''
+    Specifies row in the KLE JSON file.
+    '''
     m_name = 'row'
 
     def __pow__(self, r: MDST):
@@ -448,6 +515,9 @@ class Row(Overlay[int]):
 
 
 class Col(Overlay[int]):
+    '''
+    Specifies column in the KLE JSON file.
+    '''
     m_name = 'col'
 
     def __pow__(self, r: MDST):
@@ -498,10 +568,16 @@ class RotationAngle(Enum):
 
 
 class Rotation(Overlay[RotationAngle]):
+    '''
+    Rotates keycap. `RotationAngle.CW`, `RotationAngle.Flip`, `RotationAngle.CCW`, or `RotationAngle.Right`.
+    '''
     m_name = 'rotation'
 
 
 class CCI(Overlay[ColorConversionIntent]):
+    '''
+    Chooses color conversion intent of ICC profile. `Perceptual`, `Relative`, `RelativeNoBpc`, or `Saturation`
+    '''
     m_name = 'cci'
 
 
@@ -756,7 +832,7 @@ def manuscript_to_artwork(m: Manuscript):
         m.specifier.v)
 
 
-def _get_pil_color(color: ColorBase, alpha: ty.Optional[int] = 255):
+def _get_pil_color(color: ColorBase, alpha: int | None = 255):
     if color.cs.name == 'sRGBColor':
         c = color
     else:
@@ -794,7 +870,7 @@ def _draw_style(d: PILImageDrawModule.ImageDraw, style: Style, s: str, w: float,
         except ValueError as e:
             raise Exception(f'Error: {style.variation_name} is not in the list of style names. Choose from: {", ".join([n.decode() for n in font.get_variation_names()])}') from e
     if style.variation_axes is not None:
-        font.set_variation_by_axes(style.variation_axes)
+        font.set_variation_by_axes(list(style.variation_axes))
     bbox = np.array(font.getbbox(s)) / DPM
     if bbox[2] - bbox[0] > w:
         print("width overflow: " + s)

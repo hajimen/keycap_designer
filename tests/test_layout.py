@@ -1,3 +1,4 @@
+from collections import abc
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -23,7 +24,7 @@ class TestLayout(unittest.TestCase):
         print_rc_map(CURRENT_DIR / f'layout/{layout_name}.json', RC_FILE, unit_test=True)
         assert_pdf(self, RC_FILE, f'test_rc_map_{layout_name}')
 
-    def preview(self, layout_name: str, ms: ty.Sequence[Manuscript]):
+    def preview(self, layout_name: str, ms: abc.Sequence[Manuscript]):
         PREVIEW_FILE = CURRENT_DIR / f'tmp/{layout_name}.pdf'
         m = Profile('XDA') @ Specifier('1u') @ BackgroundColor(sRGBColor(180, 180, 180)) @ Layout(layout_name)
         print_preview([manuscript_to_artwork(i) for i in m >> ms], PREVIEW_FILE, True)

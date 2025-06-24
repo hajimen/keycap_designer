@@ -5,41 +5,48 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "keycap-designer"
 description = "Keycap Designer for DecentKeyboards' Custom Keycaps"
-readme = "README.md"
-license = {file = "LICENSE"}
+requires-python = ">=3.11"
+readme = "ReadMe.md"
+license = "MIT"
 classifiers = [
     'Development Status :: 3 - Alpha',
     "Environment :: Console",
     "Intended Audience :: Developers",
-    'License :: OSI Approved :: MIT License',
     'Operating System :: MacOS :: MacOS X',
     'Operating System :: Microsoft :: Windows',
     'Programming Language :: Python',
 ]
 dynamic = ["version"]
 dependencies = [
-    "Pillow",
-    "opencv-python",
-    "frozendict",
-    "reportlab",
-    "cmm@git+https://github.com/hajimen/cmm.git@main",
-    "ordered_enum",
-    "prompt_toolkit",
-    "pykle_serial@git+https://github.com/hajimen/pykle_serial.git@main",
-    "scikit-image",
-    "safetensors",
-    "pikepdf",
-    "mslex"
+    "pillow==11.2.1",
+    "opencv-python==4.11.0.86",
+    "frozendict==2.4.6",
+    "reportlab==4.4.2",
+    "cmm-16bit==0.1.5",
+    "ordered_enum==0.0.9",
+    "prompt_toolkit==3.0.51",
+    "pykle_serial==0.1.1",
+    "scikit-image==0.25.2",
+    "safetensors==0.5.3",
+    "pikepdf==9.9.0",
+    "mslex==1.3.0"
 ]
 
-[tool.setuptools]
-include-package-data = true
+[project.urls]
+Repository = "https://github.com/hajimen/keycap_designer"
 
-[tool.setuptools.packages.find]
-include = ["keycap_designer", "keycap_designer.deform", "keycap_designer.profile"]
+[project.scripts]
+keycap-designer = "keycap_designer.__main__:main"
 
 [tool.setuptools_scm]
 write_to = "keycap_designer/_version.py"
 
 [project.optional-dependencies]
 test = ["pdf2image"]
+
+[tool.setuptools.package-dir]
+"keycap_designer" = "keycap_designer"
+"keycap_designer.repo.content" = "content"
+"keycap_designer.repo.font" = "font"
+"keycap_designer.repo.layout" = "layout"
+"keycap_designer.repo.vscode" = "vscode"

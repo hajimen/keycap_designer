@@ -1,6 +1,5 @@
-import typing as ty
 import re
-from collections import defaultdict
+from collections import defaultdict, abc
 from pathlib import Path
 import datetime as dt
 import io
@@ -11,7 +10,8 @@ from reportlab.graphics import renderPDF, shapes
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.styles import ParagraphStyle, TA_CENTER
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import Paragraph
 from reportlab.platypus.tables import Table, TableStyle
 from reportlab.platypus.flowables import Image
@@ -100,7 +100,7 @@ def _generate_map(kle_json_filepath: Path):
     return ret, keyboard.meta
 
 
-def _shape_polygon(vertices: NDArray, fillColor=shapes.colors.transparent, strokeColor=shapes.colors.black):
+def _shape_polygon(vertices: NDArray, fillColor=colors.transparent, strokeColor=colors.black):
     return shapes.Polygon(list((vertices * mm).flatten()), fillColor=fillColor, strokeColor=strokeColor)
 
 
@@ -163,8 +163,8 @@ def _margin_simulation(img: NDArray, cci: ColorConversionIntent, aperture: Apert
         return DEFAULT_CC.workspace_to_soft_proof(img3, cci.rendering_intent(), cci.bpc())
 
 
-def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=False):
-    doc = Document(preview_filepath)
+def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=False):
+    doc = Document(preview_filepath, preview=True)
     if unit_test:
         doc.timestamp = '-'
     doc.canvas.setAuthor("keycap-designer")
@@ -175,11 +175,13 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
     # group by profile, group, layout
     layout_aws: dict[tuple[JigProfile, str, str], list[ArtWork]] = defaultdict(list)
     non_layout_aws: dict[tuple[JigProfile, str, str], list[ArtWork]] = defaultdict(list)
+    has_layout = False
     for aw in aws:
+        non_layout_aws[aw.profile, aw.group, aw.specifier].append(aw)
         if aw.layout == '':
-            non_layout_aws[aw.profile, aw.group, aw.specifier].append(aw)
             continue
         layout_aws[aw.profile, aw.group, aw.layout].append(aw)
+        has_layout = True
     simulation_cache: dict[int, PILImage] = {}
     first_page = True
     doc.canvas.setLineWidth(0.1 * mm)
@@ -339,10 +341,15 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
                 content.append([Image(buf, iw * mm, ih * mm), ])
             if len(aw.side_image) == 0:
                 content.append([Paragraph('blank keycap found', ps), ])
-            if aw.comment != '':
-                content.append([Paragraph(aw.comment, ps), ])
+                mw = 15.
+            if aw.comment != '' or has_layout:
+                comments = aw.comment.split('\r')
+                comments = [c for c in comments if c != 'homing' and c != '']
+                if aw.layout == '':
+                    comments.append('not in layout')
+                content.append([Paragraph('\r'.join(comments), ps), ])
             t = Table(content, style=ts)
-            tw, th = t.wrap(mw * mm, mh * mm)
+            tw, th = t.wrap(mw * mm + 12, mh * mm)  # The '12' is bug workaround of ReportLab.
             tw /= mm
             th /= mm
             if x + tw > LIVE_WIDTH:
@@ -412,10 +419,11 @@ def print_preview(aws: ty.Sequence[ArtWork], preview_filepath: Path, unit_test=F
 
 
 class Document:
-    def __init__(self, filepath: Path) -> None:
+    def __init__(self, filepath: Path, preview=False) -> None:
         self.timestamp = dt.datetime.now().strftime("%Y/%m/%d %H:%M")
         self.canvas = canvas.Canvas(str(filepath))
         self.i_page = 0
+        self.preview = preview
 
     def init_page(self):
         self.canvas.setPageSize(((LIVE_WIDTH + MARGIN * 2) * mm, (LIVE_HEIGHT + MARGIN * 2) * mm))
@@ -423,6 +431,8 @@ class Document:
         self.canvas.saveState()
         self.canvas.setFont('OpenSans', 5 * mm)
         self.canvas.drawRightString(LIVE_WIDTH * mm, (LIVE_HEIGHT - 5.) * mm, self.timestamp + f'   #{self.i_page + 1}')
+        if self.preview:
+            self.canvas.drawRightString(LIVE_WIDTH * mm, 2. * mm, 'To order custom printed keycaps, send this PDF file to hajime@kaoriha.org.')
         self.i_page += 1
 
     def draw_shape(self, d: shapes.Drawing):

@@ -1,9 +1,18 @@
 import unittest
 from pathlib import Path
+import sys
 import numpy as np
 import PIL.Image as PILImageModule
 from pdf2image.pdf2image import convert_from_path
 from keycap_designer.constants import CURRENT_DIR
+
+
+OUTPUT_DIR = CURRENT_DIR / 'tmp'
+if OUTPUT_DIR.is_file():
+    print(f'{OUTPUT_DIR} should be a folder. Please delete the file.')
+    sys.exit(1)
+if not OUTPUT_DIR.exists():
+    OUTPUT_DIR.mkdir()
 
 
 def pdf2image(pdf_file: Path):

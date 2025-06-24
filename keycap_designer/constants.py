@@ -67,7 +67,7 @@ OS_FONT_DIR = {
     'Linux': Path('/usr/share/fonts')
 }[platform.system()]
 APP_FONT_DIR = CURRENT_DIR / 'font'
-DESC_FONT_PATH = RESOURCE_DIR / 'font/OpenSans-Regular.ttf'
+DESC_FONT_PATH = RESOURCE_DIR / 'font/NotoSansMono-VariableFont_wdth,wght.ttf'
 DPI = 720
 IPM = 25.4
 DPM = DPI / IPM

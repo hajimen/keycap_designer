@@ -82,14 +82,19 @@ class ColorBase:
         cr: _ColorRepresentation
         an = len(args)
         if an == 1:
+            cr = _ColorRepresentation.Gamma255
             o = args[0]
-            if not isinstance(o, ColorBase):
-                raise Exception('The arg is not ColorBase object')
-            cr = _ColorRepresentation.XYZ
-            v = o.values(cr)
+            if isinstance(o, ColorBase):
+                cr = _ColorRepresentation.XYZ
+                v = o.values(cr)
+            elif isinstance(o, str):
+                from PIL import ImageColor
+                v = np.array(ImageColor.getcolor(o, "RGB"))
+            else:
+                raise Exception('The arg is wrong')
         elif an == 3:
             cr = _ColorRepresentation.Gamma255
-            v = np.array(args, np.floating)
+            v = np.array(args, float)
         else:
             raise Exception('The arg is wrong')
         self._v = v
@@ -161,9 +166,12 @@ def sRGBColor(*args):
     '''
     Returns a ColorBase object.
 
-    Parameters:
+    Parameters
     ----------
     (r, g, b) : 0-255 int or float of RGB values of the color in sRGB colorspace.
+    or
+    s : str
+        A color string like "#FF0000".
     or
     c : ColorBase
         A ColorBase object. You can convert colorspace by this.
@@ -175,9 +183,12 @@ def DisplayP3Color(*args):
     '''
     Returns a ColorBase object.
 
-    Parameters:
+    Parameters
     ----------
     (r, g, b) : 0-255 int or float of RGB values of the color in DisplayP3 colorspace.
+    or
+    s : str
+        A color string like "#FF0000".
     or
     c : ColorBase
         A ColorBase object. You can convert colorspace by this.
@@ -189,11 +200,38 @@ def AdobeRGBColor(*args):
     '''
     Returns a ColorBase object.
 
-    Parameters:
+    Parameters
     ----------
     (r, g, b) : 0-255 int or float of RGB values of the color in AdobeRGB colorspace.
+    or
+    s : str
+        A color string like "#FF0000".
     or
     c : ColorBase
         A ColorBase object. You can convert colorspace by this.
     '''
     return ColorBase(_AdobeRGBColorSpace, *args)
+
+
+def DeviceRGBColor(*args):
+    '''
+    Returns a ColorBase object.
+
+    Parameters
+    ----------
+    (r, g, b) : 0-255 int or float of RGB values of the color in device RGB colorspace.
+    or
+    s : str
+        A color string like "#FF0000".
+    or
+    c : ColorBase
+        A ColorBase object. You can convert colorspace by this.
+    '''
+    import typing as ty
+    from keycap_designer.color_management import DEFAULT_CC
+
+    tmp = ColorBase(_sRGBColorSpace, *args)
+    source = ty.cast(NDArray[np.uint16], tmp.values()[::-1].astype(np.uint16) * 257)
+    ws = DEFAULT_CC.device_rgb_as_cv2_to_workspace(source.reshape(1, 1, 3)).reshape(3)
+
+    return ColorBase(_DisplayP3ColorSpace, *tuple(ws // 257))

@@ -5,7 +5,7 @@ def generate():
     '''
     Let's see a bit elaborate pattern.
 
-    - Using serial numbers for image files (see ./starter-kit directory)
+    - Using serial numbers for image files (see ./starter-kit folder)
 
     It is quite common pattern. Just use Python's feature.
 
@@ -29,7 +29,7 @@ def generate():
 
     m = Profile('XDA') @ Specifier('1u') @ Layout('p2ppcb-starter-kit')
     # We already have seen Profile and Specifier objects in tutorial_1.py.
-    # Layout object corresponds to a KLE JSON file in ./layout directory.
+    # Layout object corresponds to a KLE JSON file in ./layout folder.
 
     for i in range(11):
         ms.append(m @ TopImage(here() / f'starter-kit/{i:0>2}.png', fit=Crop))
@@ -51,7 +51,9 @@ def generate():
         1.,  # x_loc by mm
         1.,  # y_loc by mm
         APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf',  # font path
-        h_o=Right, align=Right, v_o=Bottom)
+        h_o=Right, align=Right, v_o=Bottom,
+        color=DeviceRGBColor('#00ff00')  # If you need the most saturated color, try DeviceRGBColor.
+    )
 
     rb2 = rb.mod(y_loc=4.)
     # Just modifying an existing Style object. No need to specify everything.
