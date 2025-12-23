@@ -22,13 +22,13 @@ dependencies = [
     "opencv-python==4.11.0.86",
     "frozendict==2.4.6",
     "reportlab==4.4.2",
-    "cmm-16bit==0.1.5",
+    "cmm-16bit==0.1.6",
     "ordered_enum==0.0.9",
     "prompt_toolkit==3.0.51",
     "pykle_serial==0.1.1",
-    "scikit-image==0.25.2",
+    "scikit-image==0.26.0",
     "safetensors==0.5.3",
-    "pikepdf==9.9.0",
+    "pikepdf==9.11.0",
     "mslex==1.3.0"
 ]
 

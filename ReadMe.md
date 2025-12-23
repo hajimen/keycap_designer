@@ -22,7 +22,7 @@ Junana profile keycaps.)
 
   - You can manage to do with other OSes. A PDF viewer is required.
 
-- Python 3.11, 3.12, or 3.13
+- Python 3.11 - 3.14
 
   - Windows: Download from [python.org](https://www.python.org/downloads/)
 
