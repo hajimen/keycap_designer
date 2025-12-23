@@ -9,7 +9,7 @@ from keycap_designer.manuscript import *
 from tests.common import assert_pdf
 
 
-NW = Style(4., 2., 2., DESC_FONT_PATH)
+NW = Style(4., 2., 0.4, DESC_FONT_PATH)
 SW = Style(4., 2., 2., DESC_FONT_PATH, v_o=Bottom)
 FRONT = Style(4, 3., 2., DESC_FONT_PATH, side=FrontSide)
 

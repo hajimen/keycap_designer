@@ -28,8 +28,8 @@ class TestPreview(unittest.TestCase):
     def test_preview(self):
         PREVIEW_FILE = CURRENT_DIR / 'tmp/preview.pdf'
         m = Row(2) @ Profile('XDA') @ Specifier('1u') @ BackgroundColor(sRGBColor(220, 220, 220)) @ Layout('test')
-        ts = Style(4., 2., 2., DESC_FONT_PATH)
-        fs = Style(4., 4., 2., DESC_FONT_PATH, side=FrontSide)
+        ts = Style(4., 2., 0.5, DESC_FONT_PATH)
+        fs = Style(4., 4., 0.5, DESC_FONT_PATH, side=FrontSide)
         ms = m >> [Legend({ts: str(i + 1), fs: str(i + 1)}) @ Col(i + 1) for i in range(3)]
         ms[0] = ms[0] @ Specifier('Homing 1u')
         ms[1] = ms[1] @ Repeat(3)
@@ -44,4 +44,4 @@ class TestPreview(unittest.TestCase):
         ms.append(m2 @ Specifier('225u'))
         ms.extend([m2 @ Specifier('275u') @ Repeat(3) @ Comment(f'Lorem Ipsum {9 - i}') for i in range(21)])
         print_preview([manuscript_to_artwork(i) for i in ms], PREVIEW_FILE, True)
-        assert_pdf(self, PREVIEW_FILE, 'test_preview')
+        assert_pdf(self, PREVIEW_FILE, 'test_preview', make_oracle=True)

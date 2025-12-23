@@ -246,6 +246,7 @@ class Manuscript:
     cci: 'CCI | None' = None
     side_color: 'SideColor | None' = None
     skip: 'Skip | None' = None
+    affine: 'Affine | None' = None
 
     def dict(self):
         return {k: v for k, v in self.__dict__.items() if v is not None}
@@ -598,6 +599,14 @@ class Skip(Overlay[int]):
     m_name = 'skip'
 
 
+class Affine(DictCombinable[Side, abc.Iterable[float]]):
+    '''
+    Applies affine transform. ``v`` is the matrix. 6 elements required.
+    '''
+
+    m_name = 'affine'
+
+
 @dataclass
 class ArtWork:
     profile: JigProfile
@@ -657,6 +666,9 @@ def manuscript_to_artwork(m: Manuscript):
         outer_inner_offset_x, outer_inner_offset_y = offset_x - outer_offset_x, offset_y - outer_offset_y
         inner_mask = np.bitwise_not(((ma > 0) & (ml > 0))[outer_offset_y:outer_offset_y + oph, outer_offset_x:outer_offset_x + opw])
         outer_mask = np.bitwise_not(((ma > 0))[outer_offset_y:outer_offset_y + oph, outer_offset_x:outer_offset_x + opw])
+
+        def affine(img: NDArray[np.uint16] | cv2.Mat, v: abc.Iterable[float]) -> NDArray[np.uint16]:
+            return cv2.warpAffine(img, np.array(v, np.float64).reshape(2, 3), (ipw, iph), flags=cv2.INTER_CUBIC)  # type: ignore
 
         def mask_alpha(img: NDArray[np.uint16] | cv2.Mat, inner_to_outer: bool):
             if inner_to_outer:
@@ -725,7 +737,9 @@ def manuscript_to_artwork(m: Manuscript):
                     img[:, -rx:rw - rx] = img_from_file[ry:ry + ph]
                 else:
                     img[-ry:rh - ry, -rx:rw - rx] = img_from_file
-            img_from_file = mask_alpha(img, f.trim == TrimInner)
+            if m.affine is not None and side in m.affine.d:
+                img = affine(img, m.affine.d[side])
+            img_from_file = mask_alpha(img, f.trim == TrimInner)  # type: ignore
         else:
             img_from_file = None
 
@@ -746,7 +760,10 @@ def manuscript_to_artwork(m: Manuscript):
                 _draw_style(d, style, s, a_w, a_h, side_color)
             if rot.is_rot():
                 pil_image_legend = pil_image_legend.transpose(rot.pil_rot())
-            img_legend = mask_alpha(DEFAULT_CC.source_to_workspace(pil_image_legend), True)
+            img = DEFAULT_CC.source_to_workspace(pil_image_legend)
+            if m.affine is not None and side in m.affine.d:
+                img = affine(img, m.affine.d[side])
+            img_legend = mask_alpha(img, True)
         else:
             img_legend = None
 
@@ -884,7 +901,7 @@ def _draw_style(d: PILImageDrawModule.ImageDraw, style: Style, s: str, w: float,
     anchor += {
         Bottom: 's',
         Center: 'm',
-        Top: 't'
+        Top: 'a'
     }[style.v_o]
 
     loc = np.array([

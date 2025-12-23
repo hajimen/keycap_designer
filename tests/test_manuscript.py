@@ -4,6 +4,7 @@ from keycap_designer.manuscript import *
 
 FONT_PATH = Path(APP_FONT_DIR / 'OpenSans-VariableFont_wdth,wght.ttf')
 OUTPUT_DIR = CURRENT_DIR / 'tmp'
+RES = CURRENT_DIR / 'tests/resource'
 
 
 class TestManuscript(unittest.TestCase):
@@ -53,10 +54,31 @@ class TestManuscript(unittest.TestCase):
         gs = Group('g') >> ls
         self.assertEqual(gs[1], Group('g') @ Legend({s2: 'S2'}))
 
+    def write_img(self, img: NDArray[np.uint8], rp: Path):
+        import PIL.Image as PILImageModule
+        from keycap_designer.color_management import ICC_DIR
+        pi = PILImageModule.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
+        WORKSPACE_PROFILE_FILENAME = 'Linear P3D65.icc'
+        with open(ICC_DIR / WORKSPACE_PROFILE_FILENAME, 'rb') as f:
+            pi.info['icc_profile'] = f.read()
+        if not rp.parent.exists():
+            rp.parent.mkdir()
+        pi.save(rp)
+
+    def compare_to_oracle(self, img: NDArray[np.uint8], filename: str, make_oracle=False):
+        if make_oracle:
+            self.write_img(img, CURRENT_DIR / 'tests/oracle' / filename)
+            return
+
+        oracle = cv2.imread(str(CURRENT_DIR / 'tests/oracle' / filename), cv2.IMREAD_UNCHANGED)
+        if not np.all(img == oracle):
+            rp = OUTPUT_DIR / 'test_result' / filename
+            self.write_img(img, rp)
+            self.fail(f'Oracle and result differ. Compare {CURRENT_DIR / "tests/oracle" / filename} with {rp}')
+
     def test_manuscript_to_artwork(self):
-        RES = CURRENT_DIR / 'tests/resource'
         m = Row(1) @ Profile('XDA') @ Specifier('1u') @ BackgroundColor(sRGBColor(200, 200, 200))
-        s = Style(1., 1.5, 1., FONT_PATH)
+        s = Style(1., 1.5, 0.7, FONT_PATH)
         s_lt = s
         s_cc = s.mod(h_o=Center, align=Center, v_o=Center, x_loc=0.)
         s_rb = s.mod(h_o=Right, align=Right, v_o=Bottom)
@@ -71,25 +93,14 @@ class TestManuscript(unittest.TestCase):
         aws = [manuscript_to_artwork(i) for i in ms]
         for i, aw in enumerate(aws):
             img = (aw.side_image[TopSide] // 257).astype(np.uint8)
-            op = CURRENT_DIR / f'tests/oracle/test_manuscript_to_artwork_{i}.png'
-            oracle = cv2.imread(str(op), cv2.IMREAD_UNCHANGED)
-            if not np.all(img == oracle):
-                import PIL.Image as PILImageModule
-                from keycap_designer.color_management import ICC_DIR
-                pi = PILImageModule.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
-                WORKSPACE_PROFILE_FILENAME = 'Linear P3D65.icc'
-                with open(ICC_DIR / WORKSPACE_PROFILE_FILENAME, 'rb') as f:
-                    pi.info['icc_profile'] = f.read()
-                rp = OUTPUT_DIR / f'test_result/test_manuscript_to_artwork_{i}.png'
-                if not rp.parent.exists():
-                    rp.parent.mkdir()
-                pi.save(rp)
-                self.fail(f'Oracle and result differ. Compare {CURRENT_DIR / f"tests/oracle/test_manuscript_to_artwork_{i}.png"} with {rp}')
-            # import PIL.Image as PILImageModule
-            # pi = PILImageModule.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
-            # # pi.show()
-            # from keycap_designer.color_management import ICC_DIR
-            # WORKSPACE_PROFILE_FILENAME = 'Linear P3D65.icc'
-            # with open(ICC_DIR / WORKSPACE_PROFILE_FILENAME, 'rb') as f:
-            #     pi.info['icc_profile'] = f.read()
-            # pi.save(op)
+            self.compare_to_oracle(img, f'test_manuscript_to_artwork_{i}.png')
+
+    def test_affine(self):
+        m = Row(1) @ Profile('XDA') @ Specifier('1u') @ BackgroundColor(sRGBColor(200, 200, 200)) @ TopImage(RES / 'land.png', fit=Aspect)
+        s = Style(1., 1.5, 1., FONT_PATH)
+        m @= Legend({s: 'Test Affine'})
+        m @= Affine({TopSide: [1, -0.2, 50, 0, 1, 0]})
+
+        aw = manuscript_to_artwork(m)
+        img = (aw.side_image[TopSide] // 257).astype(np.uint8)
+        self.compare_to_oracle(img, 'test_affine.png')
