@@ -19,6 +19,7 @@ import numpy as np
 from numpy.typing import NDArray
 import PIL.Image as PILImageModule
 from PIL.Image import Image as PILImage
+from keycap_designer import InvalidDataError
 from keycap_designer.profile import Profile as JigProfile
 from keycap_designer.constants import Side, DPM, DESC_FONT_PATH, CURRENT_DIR
 from keycap_designer.manuscript import ArtWork, ColorConversionIntent
@@ -93,7 +94,7 @@ def _generate_map(kle_json_filepath: Path):
             r = int(k.labels[9])
             c = int(k.labels[10])
         except Exception as e:
-            raise Exception(f'layout KLE file lacks row-col label. filename:{kle_json_filepath.name}', e)
+            raise InvalidDataError(f'layout KLE file lacks row-col label. filename:"{kle_json_filepath.relative_to(CURRENT_DIR)}"', e) from None
 
         ret[r, c] = (vs, k.rotation_angle)  # type: ignore
 
@@ -149,18 +150,33 @@ def print_rc_map(kle_json_filepath: Path, rc_map_filepath: Path, unit_test=False
     doc.canvas.save()
 
 
-def _margin_simulation(img: NDArray, cci: ColorConversionIntent, aperture: Aperture):
+SIMULATION_CACHE: dict[str, PILImage] = {}
+
+
+def _margin_simulation(img: NDArray, cci: ColorConversionIntent, aperture: Aperture) -> PILImage:
     img3 = img[:, :, :3]
     mask = PILImageModule.open(str(aperture.mask_path))
     ml = np.array(mask.getchannel('L')) == 0
     ma = np.array(mask.getchannel('A')) == 0
     ml = ml & (np.bitwise_not(ma))
-    img3[ml] = ((img3[ml].astype(np.uint32) + 30000 * 3) / 4).astype(np.uint16)
+    img3[ml] = ((img3[ml].astype(np.uint32) // 2) + 10000).astype(np.uint16)
     if SIMULATE_ANTI_BLEED:
         from kp3.anti_bleed import simulation as simulation_anti_bleed  # type: ignore
-        return simulation_anti_bleed(img3, cci)
+        import hashlib
+        d = hashlib.md5(img3.tobytes()).hexdigest()
+        if d in SIMULATION_CACHE:
+            return SIMULATION_CACHE[d]
+        pi = simulation_anti_bleed(img3, cci)
+        SIMULATION_CACHE[d] = pi
+        return pi
     else:
         return DEFAULT_CC.workspace_to_soft_proof(img3, cci.rendering_intent(), cci.bpc())
+
+
+def artwork_simulation(aw: ArtWork, side: Side) -> PILImage:
+    img = aw.side_image[side]
+    aperture = aw.cb[side]
+    return _margin_simulation(img, aw.cci, aperture)
 
 
 def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=False):
@@ -182,7 +198,6 @@ def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=
             continue
         layout_aws[aw.profile, aw.group, aw.layout].append(aw)
         has_layout = True
-    simulation_cache: dict[int, PILImage] = {}
     first_page = True
     doc.canvas.setLineWidth(0.1 * mm)
     for (jig_prof, group, layout), saws in layout_aws.items():
@@ -194,16 +209,16 @@ def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=
                 detail.append(f'Group:{aw.group}')
             detail.append(f'Layout:{aw.layout}')
             if aw.row == -1 or aw.col == -1:
-                raise Exception('Layout specified but Row-Col not found:  ' + '  '.join(detail))
+                raise ValueError('Layout specified but Row-Col not found:  ' + '  '.join(detail))
             detail.append(f'Row:{aw.row}')
             detail.append(f'Col:{aw.col}')
             if aw.col in rc_d[aw.row]:
-                raise Exception('Row-Col collision:  ' + '  '.join(detail))
+                raise InvalidDataError('Row-Col collision:  ' + '  '.join(detail))
             rc_d[aw.row][aw.col] = aw
             sides |= aw.side_image.keys()
         layout_kle_filepath = CURRENT_DIR / f'layout/{layout}.json'
         if not layout_kle_filepath.exists():
-            raise Exception(f'KLE file not found.  Layout:{layout}')
+            raise FileNotFoundError(f'KLE file not found. Layout:"{layout}"')
         kle_map, meta = _generate_map(layout_kle_filepath)
         ma = re.search(r'pitch:(\d+(?:\.\d+)?)', meta.notes)
         pitch = float(ma.groups()[0]) if ma is not None else DEFAULT_PITCH
@@ -252,11 +267,6 @@ def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=
                     iwh = (np.array(img.shape[:2]) / DPM)[::-1]
                     iw, ih = iwh
                     aperture = aw.cb[side]
-                    if id(img) in simulation_cache:
-                        sim = simulation_cache[id(img)]
-                    else:
-                        sim = _margin_simulation(img, aw.cci, aperture)
-                        simulation_cache[id(img)] = sim
                     center = ((vs.max(axis=0) + vs.min(axis=0)) / 2) * pitch
                     doc.canvas.saveState()
                     doc.canvas.translate(center[0] * mm, center[1] * mm)
@@ -266,6 +276,7 @@ def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=
                     doc.canvas.drawImage(ImageReader(white_back),
                                          (- iw / 2.) * mm, (- ih / 2.) * mm,
                                          iw * mm, ih * mm, [0] * 6, True)
+                    sim = artwork_simulation(aw, side)
                     doc.canvas.drawImage(ImageReader(sim),
                                          (- iw / 2.) * mm, (- ih / 2.) * mm,
                                          iw * mm, ih * mm, [254, 255] * 3, True)
@@ -325,16 +336,11 @@ def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=
                 content.append([Paragraph(f'{aw.repeat} pcs', ps), ])
             for side in sorted(aw.side_image):
                 img = aw.side_image[side]
-                aperture = aw.cb[side]
                 iwh = (np.array(img.shape[:2]) / DPM)[::-1]
                 iw, ih = iwh
                 mw = max(iw, mw)
                 mh = max(ih, mh)
-                if id(img) in simulation_cache:
-                    sim = simulation_cache[id(img)]
-                else:
-                    sim = _margin_simulation(img, aw.cci, aperture)
-                    simulation_cache[id(img)] = sim
+                sim = artwork_simulation(aw, side)
                 buf = io.BytesIO()
                 sim.save(buf, format='PNG', compress_level=0)
                 buf.seek(0)
@@ -391,13 +397,9 @@ def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=
         y += 2.
     doc.canvas.save()
 
-    from safetensors.numpy import save
-    from pikepdf import Pdf, AttachedFileSpec
-    pdf = Pdf.open(preview_filepath, allow_overwriting_input=True)
     import json
     from dataclasses import asdict
-    import zlib
-    from keycap_designer import version
+
     jd = {}
     for i, aw in enumerate(aws):
         d = asdict(aw)
@@ -411,11 +413,27 @@ def print_preview(aws: abc.Sequence[ArtWork], preview_filepath: Path, unit_test=
         jd[f'property_json_{i}'] = np.array(list(json_d), np.uint8)
         for side, img in aw.side_image.items():
             jd[f'{side.name}_{i}'] = img
-    b = zlib.compress(save(jd), level=3)
-    filespec = AttachedFileSpec(pdf, b, mime_type='binary/octet-stream')  # type: ignore
-    pdf.attachments[f'keycap-designer-{version}.safetensors'] = filespec
-    pdf.save()
-    pdf.close()
+
+    from keycap_designer import version
+    from pypdf import PdfWriter
+    from pypdf.generic import create_string_object, ByteStringObject, NameObject, NumberObject
+    import hashlib
+    import datetime
+
+    attachment_f = io.BytesIO()
+    np.savez_compressed(attachment_f, **jd, allow_pickle=False)
+    writer = PdfWriter(preview_filepath, strict=True)
+    with attachment_f.getbuffer() as b:
+        embedded_file = writer.add_attachment(filename=f'keycap-designer-{version}.npz', data=b)
+        embedded_file.size = NumberObject(len(b))
+        embedded_file.description = create_string_object("keycap-designer")  # type: ignore
+        embedded_file.subtype = NameObject("/binary/octet-stream")
+        embedded_file.checksum = ByteStringObject(hashlib.md5(b).digest())
+        md = datetime.datetime.fromtimestamp(0., tz=datetime.timezone.utc) if unit_test else datetime.datetime.now(tz=datetime.timezone.utc)
+        embedded_file.modification_date = md
+        writer.write(preview_filepath)
+    attachment_f.close()
+    writer.close()
 
 
 class Document:

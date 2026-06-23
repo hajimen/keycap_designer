@@ -10,13 +10,20 @@ keycap-designer helps a lot to make a consistent design.
 So the learning curve may be too steep if you need just one or two keycaps. In that case, please send me the
 printing image file, without struggling keycap-designer.
 
-keycap-designer requires some knowledge of Python. It makes an artifact from a Python script that you write.
-Look at `content/tutorial_1.py` to `content/tutorial_3.py` and `content/tutorial_junana.py`.
+keycap-designer requires some knowledge of Python and Jupyter Lab (if online). It makes an artifact from a Python script that you write.
 
-keycap-designer assumes that all keycaps are white. No colored keycaps. (But you can make alike ones with
-Junana profile keycaps.)
+## Do it online
 
-## Requirements
+You can learn, write, and execute the script [online!](https://kaoriha.org/keycap_designer/) Powered by [JupyterLite](https://jupyterlite.rtfd.io/en/stable/try/lab).
+
+Start by opening the "Step1_Hello_World" notebook, and then work through each cell.
+
+<a href="https://kaoriha.org/keycap_designer/"><img width="867" height="717" alt="JupyterLite Screenshot" src="https://raw.githubusercontent.com/hajimen/keycap_designer/refs/heads/readme-img/jupyterlite-hello-world.png" /></a>
+
+## Offline: Requirements
+
+If you are going to make an elaborated keycap set, a version control system (probably Git) will be your friend.
+Someday Visual Studio Code for the Web may be able to do it online, but for now, we need offline things.
 
 - Windows PC or Mac
 

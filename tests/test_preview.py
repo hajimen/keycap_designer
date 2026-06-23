@@ -44,4 +44,17 @@ class TestPreview(unittest.TestCase):
         ms.append(m2 @ Specifier('225u'))
         ms.extend([m2 @ Specifier('275u') @ Repeat(3) @ Comment(f'Lorem Ipsum {9 - i}') for i in range(21)])
         print_preview([manuscript_to_artwork(i) for i in ms], PREVIEW_FILE, True)
-        assert_pdf(self, PREVIEW_FILE, 'test_preview', make_oracle=True)
+        assert_pdf(self, PREVIEW_FILE, 'test_preview')
+
+        from pypdf import PdfReader
+        reader = PdfReader(PREVIEW_FILE)
+        attachment_list = list(reader.attachment_list)
+        self.assertEqual(len(attachment_list), 1, 'Should have an attachment')
+        attachment = attachment_list[0]
+        self.assertStartsWith(attachment.name, 'keycap-designer', 'Filename should starts with keycap-designer')
+        import numpy as np
+        import io
+        with io.BytesIO(attachment.content) as f:
+            jd = np.load(f)
+        self.assertIn('property_json_0', jd, 'Should have property_json_0')
+        reader.close()

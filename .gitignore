@@ -144,3 +144,4 @@ foo.py
 tests/poppler
 tmp
 history.txt
+**.db

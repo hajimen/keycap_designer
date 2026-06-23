@@ -64,7 +64,8 @@ RESOURCE_DIR = Path(os.path.dirname(__file__))
 OS_FONT_DIR = {
     'Windows': Path(r'C:\Windows\Fonts'),
     'Darwin': Path('/Library/Fonts'),
-    'Linux': Path('/usr/share/fonts')
+    'Linux': Path('/usr/share/fonts'),
+    'Emscripten': CURRENT_DIR
 }[platform.system()]
 APP_FONT_DIR = CURRENT_DIR / 'font'
 DESC_FONT_PATH = RESOURCE_DIR / 'font/NotoSansMono-VariableFont_wdth,wght.ttf'

@@ -1,0 +1,101 @@
+name: Python package
+
+on:
+  push:
+    branches:
+      - dev-*
+
+jobs:
+  build:
+    name: Build Python wheel
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
+    - name: Install dependencies
+      run: python -m pip install --upgrade pip build
+    - name: Build
+      run: python -m build --wheel
+    - name: Upload whl file
+      uses: actions/upload-artifact@v4
+      with:
+        name: whl
+        path: dist/
+
+  # publish-to-pypi:
+  #   name: PublishPyPI
+
+  #   needs:
+  #   - build
+
+  #   runs-on: ubuntu-latest
+
+  #   environment:
+  #     name: pypi
+  #     url: https://pypi.org/p/keycap-designer
+
+  #   permissions:
+  #     id-token: write
+
+  #   steps:
+  #   - name: Download all the dists
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       name: whl
+  #       path: dist/
+  #   - name: Publish distribution 📦 to PyPI
+  #     uses: pypa/gh-action-pypi-publish@release/v1
+
+  build-jupyterlite:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.13
+    - name: Install the dependencies
+      run: |
+        python -m pip install -r jupyterlite/requirements.txt
+    - name: Download wheel
+      uses: actions/download-artifact@v4
+      with:
+        name: whl
+        path: jupyterlite/pypi/
+    - name: Build the JupyterLite site
+      run: |
+        cd jupyterlite
+        jupyter lite build --contents home --output-dir dist
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: jupyterlite/dist/
+
+  deploy-jupyterlite:
+    needs: build-jupyterlite
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download pages
+      uses: actions/download-artifact@v4
+      with:
+        path: dist/
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

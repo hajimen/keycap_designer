@@ -9,11 +9,11 @@ RES = CURRENT_DIR / 'tests/resource'
 
 class TestManuscript(unittest.TestCase):
     def test_matmul(self):
-        self.assertEqual(Layout('US-ASCII') % Layout('ISO'), Layout('ISO'))
-        m = Layout('US-ASCII') @ Col(1)
+        self.assertEqual(Layout('ansi-104') % Layout('test'), Layout('test'))
+        m = Layout('ansi-104') @ Col(1)
         self.assertIsInstance(m, Manuscript)
         self.assertEqual(m.col.v, 1)  # type: ignore
-        m2 = Layout('US-ASCII') @ Col(2)
+        m2 = Layout('ansi-104') @ Col(2)
         self.assertNotEqual(m, m2)
         m3 = m2 @ Col(1)
         self.assertEqual(m, m3)
@@ -104,3 +104,12 @@ class TestManuscript(unittest.TestCase):
         aw = manuscript_to_artwork(m)
         img = (aw.side_image[TopSide] // 257).astype(np.uint8)
         self.compare_to_oracle(img, 'test_affine.png')
+
+    def test_trim(self):
+        m = Row(1) @ Profile('XDA') @ Specifier('1u')
+        aw = manuscript_to_artwork(m @ TopImage(RES / 'square.tiff'))
+        img = (aw.side_image[TopSide] // 257).astype(np.uint8)
+        self.compare_to_oracle(img, 'test_trim1.png')
+        aw = manuscript_to_artwork(m  @ TopImage(RES / 'square.tiff', trim=TrimOuter))
+        img = (aw.side_image[TopSide] // 257).astype(np.uint8)
+        self.compare_to_oracle(img, 'test_trim2.png')

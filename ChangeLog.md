@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7] - 2026-06-23
+
+- Now Pyodide ready. `safetensors` is replaced by `np.savez_compress()`. `pikepdf` is replaced by `pypdf`.
+- Now Jupyter ready. `from keycap_designer.jupyter import *` and `show_inline([Manuscript])` etc.
+- Now JupyterLite in Github Pages is available. See `jupyterlite/`.
+- `trim` added to `Style`. Now you can print legends on margin area.
+
 ## [0.1.6] - 2025-12-23
 
 - Now Python 3.14 ready.

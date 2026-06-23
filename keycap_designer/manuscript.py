@@ -3,13 +3,16 @@ import collections.abc as abc
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
+from os import PathLike
 import inspect
 import numpy as np
 from numpy.typing import NDArray
 import PIL.Image as PILImageModule
 import PIL.ImageDraw as PILImageDrawModule
 import PIL.ImageFont as PILImageFontModule
+from PIL import UnidentifiedImageError
 import cv2
+from keycap_designer import InvalidDataError
 from keycap_designer.constants import *
 from keycap_designer.profile import CapBase, PROFILES, Profile as JigProfile
 from keycap_designer.color_management import DEFAULT_CC, RenderingIntent
@@ -18,7 +21,8 @@ from keycap_designer.image import alpha_composite, float_uint16, ColorBase, sRGB
 
 def here():
     '''
-    Returns a pathlib.Path object representing the folder which contains the caller's source file.
+    Returns a pathlib.Path object representing the folder which contains
+    the caller's source file.
     '''
     return Path(os.path.dirname(inspect.stack()[1].filename))
 
@@ -49,6 +53,38 @@ class ColorConversionIntent(Enum):
         }[self]
 
 
+def _pi(self):
+    from numbers import Real
+    from dataclasses import fields
+    for field in fields(self):
+        value = getattr(self, field.name)
+        hit = False
+        ft = field.type
+        if ft is float:
+            # int is not float
+            ft = Real
+        try:
+            if not isinstance(value, ft):  # type: ignore
+                hit = True
+        except TypeError:
+            #  abc.Iterable[float] goes here
+            return
+        if hit:
+            ftn = field.type if isinstance(field.type, str) else field.type.__name__
+            raise TypeError(f"Expected {field.name} to be {ftn}, got {type(value).__name__}")
+
+
+def _dataclass_dict(self):
+    from dataclasses import fields
+    ret = {}
+    for field in fields(self):
+        value = getattr(self, field.name)
+        if value is None or value == field.default:
+            continue
+        ret[field.name] = value
+    return ret
+
+
 @dataclass(frozen=True)
 class Style:
     '''
@@ -59,24 +95,33 @@ class Style:
     size: float
         Font size by mm.
     x_loc: float
-        Horizontal distance from the origin. See ``h_o`` and ``align`` too. The unit is mm.
+        Horizontal distance from the origin. See ``h_o`` and ``align`` too.
+        The unit is mm.
     y_loc: float
         Vertical distance from the origin. See ``v_o`` too. The unit is mm.
-    font: pathlib.Path
+    font: os.PathLike | str
         Font path.
     h_o: Orientation = Left
-        If ``Right``, the layout coordinate system is horizontally mirrored. ``x_loc`` means the distance from the right edge.
-        ``Center`` is available too. In the case, the layout coordinate origin is placed at the center of the layout area.
+        If ``Right``, the layout coordinate system is horizontally mirrored.
+        ``x_loc`` means the distance from the right edge.
+        ``Center`` is available too. In the case, the layout coordinate
+        origin is placed at the center of the layout area.
     v_o: Orientation = Top
-        If ``Bottom``, the layout coordinate system is vertically mirrored. ``y_loc`` means the distance from the bottom edge.
-        ``Center`` is available too. In the case, the layout coordinate origin is placed at the center of the layout area.
+        If ``Bottom``, the layout coordinate system is vertically mirrored.
+        ``y_loc`` means the distance from the bottom edge.
+        ``Center`` is available too. In the case, the layout coordinate
+        origin is placed at the center of the layout area.
     align: Orientation = Left
-        If ``Center``, the legend placing point comes into the horizontal center of the legend area.
-        No way to specify vertical center. 'Vertical center' of latin alphabet is a problematic idea.
+        If ``Center``, the legend placing point comes into the horizontal
+        center of the legend area.
+        No way to specify vertical center. 'Vertical center' of latin
+        alphabet is a problematic idea.
     color: ColorBase = sRGBColor('#000000')
         Legend's color.
     side: Side = TopSide
         Printing side.
+    trim : ImageTrim = TrimInner
+        `TrimInner` or `TrimOuter`.
     variation_name: str | None = None
         The style name of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_name
     variation_axes: abc.Iterable[float] | None = None
@@ -85,12 +130,13 @@ class Style:
     size: float
     x_loc: float
     y_loc: float
-    font: Path
+    font: PathLike | str
     h_o: Orientation = Left
     v_o: Orientation = Top
     align: Orientation = Left
     color: ColorBase = sRGBColor('#000000')
     side: Side = TopSide
+    trim: ImageTrim = TrimInner
     variation_name: str | None = None
     variation_axes: abc.Iterable[float] | None = None
 
@@ -98,12 +144,13 @@ class Style:
             size: float | None = None,
             x_loc: float | None = None,
             y_loc: float | None = None,
-            font: Path | None = None,
+            font: PathLike | str | None = None,
             h_o: Orientation | None = None,
             v_o: Orientation | None = None,
             align: Orientation | None = None,
             color: ColorBase | None = None,
             side: Side | None = None,
+            trim: ImageTrim | None = None,
             variation_name: str | None = None,
             variation_axes: abc.Iterable[float] | None = None):
         '''
@@ -114,27 +161,33 @@ class Style:
         size: float | None = None
             Font size by mm.
         x_loc: float | None = None
-            Horizontal distance from the origin. See ``h_o`` and ``align`` too. The unit is mm.
+            Horizontal distance from the origin. See ``h_o`` and ``align`` too.
+            The unit is mm.
         y_loc: float | None = None
             Vertical distance from the origin. See ``v_o`` too. The unit is mm.
-        font: pathlib.Path | None = None
+        font: os.PathLike | str | None = None
             Font path.
         h_o: Orientation | None = None
-            If ``Right``, the layout is right justification and ``x_loc`` means the distance from right edge. ``Center`` is available too.
+            If ``Right``, the layout is right justification and ``x_loc`` means
+            the distance from right edge. ``Center`` is available too.
         v_o: Orientation | None = None
-            If ``Bottom``, the legend comes into the bottom of printable area. ``Center`` is available too.
+            If ``Bottom``, the legend comes into the bottom of printable area.
+            ``Center`` is available too.
         align: Orientation | None = None
-            If ``Center``, the origin comes into the horizontal center of the legend.
+            If ``Center``, the origin comes into the horizontal center of the
+            legend.
         color: ColorBase | None = None
             Legend's color
         side: Side | None = None
             Printing side.
+        trim : ImageTrim | None = None
+            `TrimInner` or `TrimOuter`.
         variation_name: str | None = None
             The style name of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_name
         variation_axes: abc.Iterable[float] | None = None
             The axes of variable font. See: https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.FreeTypeFont.set_variation_by_axes
         '''
-        ret = self.__dict__.copy()
+        ret = self.dict()
         for n, t in [
                 ('size', float),
                 ('x_loc', float),
@@ -145,8 +198,9 @@ class Style:
                 ('align', Orientation),
                 ('color', ColorBase),
                 ('side', Side),
+                ('trim', ImageTrim),
                 ('variation_name', str),
-                ('variation_axes', abc.Iterable),
+                ('variation_axes', tuple),
         ]:
             a = locals()[n]
             if a is not None:
@@ -171,6 +225,23 @@ class Style:
         ret['y_loc'] += y
         return Style(**ret)
 
+    def dict(self):
+        return _dataclass_dict(self)
+
+    def __repr__(self) -> str:
+        cn = self.__class__.__name__
+        ret = []
+        for k, v in self.dict().items():
+            ret.append(f'{k}={repr(v)}')
+        return cn + '(' + ', '.join(ret) + ')'
+
+    def __post_init__(self):
+        _pi(self)
+        if self.font:
+            p = Path(self.font)
+            if not p.exists():
+                raise FileNotFoundError(f'Cannot find file: "{self.font}"')
+
 
 @dataclass
 class ImageFile:
@@ -179,7 +250,7 @@ class ImageFile:
 
     Parameters
     ----------
-    path: pathlib.Path
+    path: os.PathLike | str
         Image file path.
     fit : ImageFit = Aspect
         `Aspect`, `Crop`, `Expand`, or `PixelWise`.
@@ -188,10 +259,29 @@ class ImageFile:
     trim : ImageTrim = TrimInner
         `TrimInner` or `TrimOuter`.
     '''
-    path: Path
+    path: PathLike | str
     fit: ImageFit = Aspect
     interpolate: ImageInterpolate = Cubic
     trim: ImageTrim = TrimInner
+
+    def __post_init__(self):
+        _pi(self)
+        p = Path(self.path)
+        if not p.exists():
+            raise FileNotFoundError(f'Cannot find file: "{self.path}"')
+        try:
+            PILImageModule.open(str(self.path))
+        except UnidentifiedImageError:
+            raise InvalidDataError(f'The file is not a valid image file: "{self.path}"') from None
+
+    def dict(self):
+        return _dataclass_dict(self)
+
+    def __repr__(self) -> str:
+        args = []
+        for k, v in self.dict().items():
+            args.append(f'{k}={repr(v)}')
+        return 'ImageFile(' + ', '.join(args) + ')'
 
 
 MDT = ty.Union['Manuscript', 'Descriptor']
@@ -269,10 +359,22 @@ class Manuscript:
                 ret[k] = r
             return Manuscript(**ret)  # type: ignore
         else:
-            raise Exception('@ rvalue should be Manuscript or Descriptor.')
+            raise ValueError('@ rvalue should be Manuscript or Descriptor.')
 
     def __rshift__(self, r: MDST):
         return [ty.cast(Manuscript, self @ v) for v in r]
+
+    def __repr__(self) -> str:
+        cn = self.__class__.__name__
+        ret = []
+        for k, v in self.dict().items():
+            ret.append(f'{k}={repr(v)}')
+        return cn + '(' + ', '.join(ret) + ')'
+
+    def __post_init__(self):
+        _pi(self)
+        if self.profile is not None and self.specifier is not None:
+            _resolve_profile_specifier(self)
 
 
 K = ty.TypeVar('K')
@@ -295,7 +397,7 @@ class DictCombinable(Descriptor, ty.Generic[K, V]):
         elif isinstance(r, tuple) and isinstance(r[0], self.kv[0]) and isinstance(r[1], self.kv[1]):
             ret[r[0]] = r[1]
         else:
-            raise Exception(f'% rvalue should be the same Descriptor or tuple[{self.kv[0]}, {self.kv[1]}].')
+            raise ValueError(f'% rvalue should be the same Descriptor or tuple[{self.kv[0]}, {self.kv[1]}].')
         o = self.__class__.__new__(self.__class__)
         self.__class__.__init__(o, ret)
         return o
@@ -307,21 +409,38 @@ class DictCombinable(Descriptor, ty.Generic[K, V]):
         cn = self.__class__.__name__
         ret = []
         for k, v in self.d.items():
-            ret.append(f'{repr(k)}: {repr(v)}')
+            if v is not None:
+                ret.append(f'{repr(k)}: {repr(v)}')
         return cn + '({' + ', '.join(ret) + '})'
+
+    def _type_check(self, kt, vt):
+        for k, v in self.d.items():
+            if not isinstance(k, kt):
+                raise TypeError(f"Expected dict key to be {kt.__name__}, got {type(k).__name__}")
+            if not isinstance(v, vt):
+                raise TypeError(f"Expected dict value to be {vt.__name__}, got {type(v).__name__}")
 
 
 class Legend(DictCombinable[Style, str]):
     '''
-    Specifies legends. The key should be a Style object, and the value should be a legend str.
+    Specifies legends. The key should be a Style object, and the value
+    should be a legend str.
     '''
     kv = [Style, str]
     m_name = 'legend'
+
+    def __init__(self, d: dict[Style, str] | None = None) -> None:
+        super().__init__(d)
+        self._type_check(Style, str)
 
 
 class Image(DictCombinable[Side, ImageFile]):
     kv = [Side, ImageFile]
     m_name = 'image'
+
+    def __init__(self, d: dict[Side, ImageFile] | None = None) -> None:
+        super().__init__(d)
+        self._type_check(Side, ImageFile)
 
 
 def TopImage(path: Path, fit: ImageFit = Aspect, interpolate: ImageInterpolate = Cubic, trim: ImageTrim = TrimInner):
@@ -330,7 +449,7 @@ def TopImage(path: Path, fit: ImageFit = Aspect, interpolate: ImageInterpolate =
 
     Parameters
     ----------
-    path : pathlib.Path
+    path : os.PathLike | str
         Image file path.
     fit : ImageFit = Aspect
         `Aspect`, `Crop`, `Expand`, or `PixelWise`.
@@ -344,11 +463,12 @@ def TopImage(path: Path, fit: ImageFit = Aspect, interpolate: ImageInterpolate =
 
 def FrontImage(path: Path, fit: ImageFit = Aspect, interpolate: ImageInterpolate = Cubic, trim: ImageTrim = TrimInner):
     '''
-    Specifies an image file printing on front-side and its image processing policy.
+    Specifies an image file printing on front-side and its image
+    processing policy.
 
     Parameters
     ----------
-    path : pathlib.Path
+    path : os.PathLike | str
         Image file path.
     fit : ImageFit = Aspect
         `Aspect`, `Crop`, `Expand`, or `PixelWise`.
@@ -375,14 +495,14 @@ class StrCombinable(Descriptor):
             self.__class__.__init__(o, ret)
             return o
         else:
-            raise Exception(r'% rvalue should be the same Descriptor.')
+            raise ValueError(r'% rvalue should be the same Descriptor.')
 
     def __eq__(self, r) -> bool:
         return isinstance(r, type(self)) and r.v == self.v
 
     def __repr__(self) -> str:
         cn = self.__class__.__name__
-        return f"{cn}('{repr(self.v)}')"
+        return f"{cn}({repr(self.v)})"
 
 
 class Comment(StrCombinable):
@@ -410,7 +530,7 @@ class Overlay(Descriptor, ty.Generic[V]):
         if isinstance(r, type(self)):
             return r
         else:
-            raise Exception(r'% rvalue should be the same Descriptor.')
+            raise ValueError(r'% rvalue should be the same Descriptor.')
 
     def __eq__(self, other) -> bool:
         return isinstance(other, type(self)) and self.v == other.v
@@ -433,13 +553,14 @@ class Repeat(Overlay[int]):
         elif isinstance(r, int):
             ret *= r
         else:
-            raise Exception(r'% rvalue should be Repeat or int.')
+            raise ValueError(r'% rvalue should be Repeat or int.')
         return Repeat(ret)
 
 
 class BackgroundColor(Overlay[ColorBase]):
     '''
-    Affects to margin area, all sides, and legends' outline color. It is alike "keycap's color".
+    Affects to margin area, all sides, and legends' outline color.
+    It is alike "keycap's color".
     '''
     m_name = 'background_color'
 
@@ -451,12 +572,16 @@ class BackgroundImage(Overlay[ImageFile]):
     m_name = 'background_image'
 
 
-def Wallpaper(path: Path, **kwargs):
+def Wallpaper(path: os.PathLike | str):
     '''
-    Shorthand of BackgroundImage. kwargs is passed to ImageFile().
-    BackgroundImage specifies image tiling on all sides including their margin area.
+    Specifies image tiling on all sides including their margin area.
+
+    Parameters
+    ----------
+    path : os.PathLike | str
+        Image file path.
     '''
-    return BackgroundImage(ImageFile(path, **kwargs))
+    return BackgroundImage(ImageFile(path))
 
 
 class SideColor(DictCombinable[Side, ColorBase]):
@@ -475,10 +600,15 @@ class Profile(Overlay[str]):
     m_name = 'profile'
 
 
+XDA = Profile('XDA')  # XDA profile
+Junana = Profile('Junana')  # Junana profile (incl. Junana MX)
+
+
 class Specifier(Overlay[str]):
     '''
     Specifier string. ``1u`` denotes the most common regular-sized keycap.
-    ``Homing 1u`` denotes 1u with bump. ``Convex 1u`` denotes convex-formed keycap.
+    ``Homing 1u`` denotes 1u with bump.
+    ``Convex 1u`` denotes convex-formed keycap.
     ``15u`` denotes Tab-key size. No period between 1 and 5.
     '''
     m_name = 'specifier'
@@ -490,6 +620,15 @@ class Layout(Overlay[str]):
     The KLE JSON file should be in ./layout folder.
     '''
     m_name = 'layout'
+
+    def __init__(self, v: str) -> None:
+        super().__init__(v)
+        from keycap_designer.constants import CURRENT_DIR
+        p = Path(CURRENT_DIR / 'layout' / (v + '.json'))
+        if not p.exists():
+            raise FileNotFoundError(f'Cannot find file: "{p.relative_to(CURRENT_DIR)}"')
+        from keycap_designer.preview import _generate_map
+        _generate_map(p)  # just for check
 
 
 def _pow_rc(self: 'Row | Col', r: MDST):
@@ -570,14 +709,16 @@ class RotationAngle(Enum):
 
 class Rotation(Overlay[RotationAngle]):
     '''
-    Rotates keycap. `RotationAngle.CW`, `RotationAngle.Flip`, `RotationAngle.CCW`, or `RotationAngle.Right`.
+    Rotates keycap. `RotationAngle.CW`, `RotationAngle.Flip`,
+    `RotationAngle.CCW`, or `RotationAngle.Right`.
     '''
     m_name = 'rotation'
 
 
 class CCI(Overlay[ColorConversionIntent]):
     '''
-    Chooses color conversion intent of ICC profile. `Perceptual`, `Relative`, `RelativeNoBpc`, or `Saturation`
+    Chooses color conversion intent of ICC profile. `Perceptual`,
+    `Relative`, `RelativeNoBpc`, or `Saturation`
     '''
     m_name = 'cci'
 
@@ -622,6 +763,9 @@ class ArtWork:
     col: int
     specifier: str
 
+    def __post_init__(self):
+        _pi(self)
+
 
 def bg_composition(img: NDArray[np.uint16], bg: NDArray[np.uint16]):
     alpha = img[:, :, 3]
@@ -632,18 +776,23 @@ def bg_composition(img: NDArray[np.uint16], bg: NDArray[np.uint16]):
     return bg
 
 
-def manuscript_to_artwork(m: Manuscript):
+def _resolve_profile_specifier(m: Manuscript):
     if m.profile is None:
-        raise Exception('Profile not specified.')
+        raise ValueError('Profile not specified.')
     if m.profile.v not in PROFILES:
-        raise Exception(f'Profile {m.profile.v} not found.')
+        raise InvalidDataError(f'Profile "{m.profile.v}" not found.')
     jig_profile = PROFILES[m.profile.v]
     sp_cb = jig_profile.sp_cb_dict
     if m.specifier is None:
-        raise Exception('Specifier not specified.')
+        raise ValueError('Specifier not specified.')
     if m.specifier.v not in sp_cb:
-        raise Exception(f'Specifier {m.specifier.v} not found.')
+        raise InvalidDataError(f'Specifier "{m.specifier.v}" not found in profile {m.profile.v}.')
     cb = sp_cb[m.specifier.v]
+    return jig_profile, cb
+
+
+def manuscript_to_artwork(m: Manuscript):
+    jig_profile, cb = _resolve_profile_specifier(m)
     rot = RotationAngle.Right if m.rotation is None else m.rotation.v
 
     background_color = sRGBColor(255, 255, 255) if m.background_color is None else m.background_color.v
@@ -682,18 +831,18 @@ def manuscript_to_artwork(m: Manuscript):
 
         if m.image is not None and side in m.image.d:
             f = m.image.d[side]
-            if not f.path.exists():
-                raise FileNotFoundError(f'{f.path} not exist.')
-            pil_image_from_file = PILImageModule.open(str(f.path))
-            if 'RGB' not in pil_image_from_file.mode:
-                pil_image_from_file = pil_image_from_file.convert('RGBA')
-                if 'icc_profile' in pil_image_from_file.info:
-                    del pil_image_from_file.info['icc_profile']
-            elif pil_image_from_file.mode != 'RGBA':
-                pil_image_from_file = pil_image_from_file.convert('RGBA')
-            if rot.is_rot():
-                pil_image_from_file = pil_image_from_file.transpose(rot.pil_rot())
-            img_from_file = DEFAULT_CC.source_to_workspace(pil_image_from_file)
+            if not Path(f.path).exists():
+                raise FileNotFoundError(f'"{f.path}" not exist.')
+            with PILImageModule.open(str(f.path)) as pil_image_from_file:
+                if 'RGB' not in pil_image_from_file.mode:
+                    pil_image_from_file = pil_image_from_file.convert('RGBA')
+                    if 'icc_profile' in pil_image_from_file.info:
+                        del pil_image_from_file.info['icc_profile']
+                elif pil_image_from_file.mode != 'RGBA':
+                    pil_image_from_file = pil_image_from_file.convert('RGBA')
+                if rot.is_rot():
+                    pil_image_from_file = pil_image_from_file.transpose(rot.pil_rot())
+                img_from_file = DEFAULT_CC.source_to_workspace(pil_image_from_file)
             uh, uw = img_from_file.shape[:2]
             rx, ry = 0, 0
             pw, ph = (ipw, iph) if f.trim == TrimInner else (opw, oph)
@@ -749,21 +898,24 @@ def manuscript_to_artwork(m: Manuscript):
                 if style.side == side:
                     legends.append((style, s))
         if len(legends) > 0:
-            pil_image_legend = PILImageModule.new('RGBA', (ipw, iph), _get_pil_color(side_color, 0))
-            if rot.is_rot():
-                pil_image_legend = pil_image_legend.transpose(rot.inv().pil_rot())
             a_w, a_h = (a_wh[1], a_wh[0]) if rot.is_swap() else (a_wh[0], a_wh[1])
-            d = PILImageDrawModule.Draw(pil_image_legend)
-            # antialias
-            d.fontmode = 'L'  # type: ignore
+            img_legend = np.zeros((oph, opw, 4), np.uint16)
             for style, s in legends:
-                _draw_style(d, style, s, a_w, a_h, side_color)
-            if rot.is_rot():
-                pil_image_legend = pil_image_legend.transpose(rot.pil_rot())
-            img = DEFAULT_CC.source_to_workspace(pil_image_legend)
-            if m.affine is not None and side in m.affine.d:
-                img = affine(img, m.affine.d[side])
-            img_legend = mask_alpha(img, True)
+                pw, ph = (ipw, iph) if style.trim == TrimInner else (opw, oph)
+                with PILImageModule.new('RGBA', (pw, ph), _get_pil_color(side_color, 0)) as pil_image_legend:
+                    if rot.is_rot():
+                        pil_image_legend = pil_image_legend.transpose(rot.inv().pil_rot())
+                    d = PILImageDrawModule.Draw(pil_image_legend)
+                    # antialias
+                    d.fontmode = 'L'  # type: ignore
+                    _draw_style(d, style, s, a_w, a_h, side_color)
+                    if rot.is_rot():
+                        pil_image_legend = pil_image_legend.transpose(rot.pil_rot())
+                    img = DEFAULT_CC.source_to_workspace(pil_image_legend)
+                if m.affine is not None and side in m.affine.d:
+                    img = affine(img, m.affine.d[side])
+                masked = mask_alpha(img, style.trim == TrimInner)
+                img_legend = alpha_composite(masked, img_legend)
         else:
             img_legend = None
 
@@ -797,11 +949,11 @@ def manuscript_to_artwork(m: Manuscript):
             return np.full((h, w, 4), _get_workspace_color(background_color), dtype=np.uint16)
         else:
             x, y = xy
-            pil_image = PILImageModule.open(str(m.background_image.v.path))
-            pil_image = pil_image.convert('RGBA')
-            if rot.is_rot():
-                pil_image = pil_image.transpose(rot.pil_rot())
-            bg_img = DEFAULT_CC.source_to_workspace(pil_image)
+            with PILImageModule.open(str(m.background_image.v.path)) as pil_image:
+                pil_image = pil_image.convert('RGBA')
+                if rot.is_rot():
+                    pil_image = pil_image.transpose(rot.pil_rot())
+                bg_img = DEFAULT_CC.source_to_workspace(pil_image)
             bh, bw, _ = bg_img.shape
             if bh < h or bw < w or bh // 2 < y or bh // 2 < h - y or bw // 2 < x or bw // 2 < w - x:
                 rep_y = (h // bh) + 2
@@ -817,7 +969,8 @@ def manuscript_to_artwork(m: Manuscript):
     for side, img in side_fg_image.items():
         oph, opw, _ = img.shape
         aperture = cb[side]
-        ma = np.array(PILImageModule.open(str(aperture.mask_path)).getchannel('A'))
+        with PILImageModule.open(str(aperture.mask_path)) as pi:
+            ma = np.array(pi.getchannel('A'))
         outer_offset_x, outer_offset_y = aperture.outer_offset
         outer_mask_center_x, outer_mask_center_y = aperture.outer_mask_center
         a_img = generate_bg(wh=ma.shape[::-1], xy=(outer_mask_center_x + outer_offset_x, outer_mask_center_y + outer_offset_y))
@@ -831,6 +984,8 @@ def manuscript_to_artwork(m: Manuscript):
     if m.col is not None:
         rank += m.col.v * 1000
     comment = '' if m.comment is None else m.comment.v
+    if m.specifier is None:
+        raise Exception('bad code')
     if m.specifier.v in jig_profile.sp_comment_dict:
         if comment != '':
             comment = '\r' + comment
@@ -874,18 +1029,15 @@ def _ndarray_to_float_tuple(arr: NDArray):
 
 
 def _draw_style(d: PILImageDrawModule.ImageDraw, style: Style, s: str, w: float, h: float, background_color: ColorBase):
-    if not style.font.exists():
-        raise Exception(f'Cannot find font file: {style.font}')
-
     psize = int(style.size * DPM)
     font = PILImageFontModule.truetype(str(style.font), psize)
     if style.variation_name is not None:
         try:
             font.set_variation_by_name(style.variation_name)
         except OSError as e:
-            raise Exception(f'Error: {font.getname()[0]} is not a variable font.') from e
+            raise InvalidDataError(f'"{font.getname()[0]}" is not a variable font.') from e
         except ValueError as e:
-            raise Exception(f'Error: {style.variation_name} is not in the list of style names. Choose from: {", ".join([n.decode() for n in font.get_variation_names()])}') from e
+            raise InvalidDataError(f'"{style.variation_name}" is not in the list of style names. Choose from: {", ".join([n.decode() for n in font.get_variation_names()])}') from e
     if style.variation_axes is not None:
         font.set_variation_by_axes(list(style.variation_axes))
     bbox = np.array(font.getbbox(s)) / DPM
