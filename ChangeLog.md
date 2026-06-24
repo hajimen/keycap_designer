@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.8] - 2026-06-24
+
+- JupyterLite updated. Now Pyodide 314.0.0!
+- Fix: cmm-16bit 0.1.8 was corrupted for printing ICC profile.
+
 ## [0.1.7] - 2026-06-23
 
 - Now Pyodide ready. `safetensors` is replaced by `np.savez_compress()`. `pikepdf` is replaced by `pypdf`.

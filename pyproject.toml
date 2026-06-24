@@ -22,7 +22,7 @@ dependencies = [
     "opencv-python>=4.11.0.86",
     "frozendict==2.4.7",
     "reportlab==4.5.1",
-    "cmm-16bit>=0.1.8",
+    "cmm-16bit>=0.1.9",
     "ordered_enum==0.0.10",
     "prompt_toolkit>=3.0.50",
     "pykle_serial==0.1.1",
