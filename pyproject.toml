@@ -27,8 +27,7 @@ dependencies = [
     "prompt_toolkit>=3.0.50",
     "pykle_serial==0.1.1",
     "scikit-image>=0.25.2",
-    "pypdf==6.13.2",
-    "ipynbname==2025.8.0.0"
+    "pypdf==6.13.2"
 ]
 
 [project.urls]
