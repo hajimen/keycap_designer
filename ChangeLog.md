@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.9] - 2026-07-29
+
+- Dependencies updated.
+- Bug fix: Dusts on Junana front side is resolved.
+
 ## [0.1.8] - 2026-06-24
 
 - JupyterLite updated. Now Pyodide 314.0.0!
