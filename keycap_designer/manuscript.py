@@ -821,7 +821,7 @@ def manuscript_to_artwork(m: Manuscript):
 
         def mask_alpha(img: NDArray[np.uint16] | cv2.Mat, inner_to_outer: bool):
             if inner_to_outer:
-                new_img = np.zeros((oph, opw, 4), np.uint16)
+                new_img = np.full((oph, opw, 4), _get_workspace_color(side_color, 0), np.uint16)
                 new_img[outer_inner_offset_y: outer_inner_offset_y + iph, outer_inner_offset_x: outer_inner_offset_x + ipw] = img
                 img = new_img
             ach = img[:, :, 3].copy()
@@ -875,7 +875,7 @@ def manuscript_to_artwork(m: Manuscript):
                 flag = (cv2.INTER_CUBIC if f.interpolate == Cubic else cv2.INTER_NEAREST) if (rw > uw) or (rh > uh) else cv2.INTER_AREA
                 img_from_file = ty.cast(NDArray[np.uint16], cv2.resize(img_from_file, (rw, rh), interpolation=flag))
 
-            img = np.zeros((ph, pw, 4), np.uint16)
+            img = np.full((ph, pw, 4), _get_workspace_color(side_color, 0), np.uint16)
             if rx > 0:
                 if ry > 0:
                     img = img_from_file[ry:ry + rh, rx:rx + pw]
@@ -899,7 +899,7 @@ def manuscript_to_artwork(m: Manuscript):
                     legends.append((style, s))
         if len(legends) > 0:
             a_w, a_h = (a_wh[1], a_wh[0]) if rot.is_swap() else (a_wh[0], a_wh[1])
-            img_legend = np.zeros((oph, opw, 4), np.uint16)
+            img_legend = np.full((oph, opw, 4), _get_workspace_color(side_color, 0), np.uint16)
             for style, s in legends:
                 pw, ph = (ipw, iph) if style.trim == TrimInner else (opw, oph)
                 with PILImageModule.new('RGBA', (pw, ph), _get_pil_color(side_color, 0)) as pil_image_legend:
@@ -915,7 +915,7 @@ def manuscript_to_artwork(m: Manuscript):
                 if m.affine is not None and side in m.affine.d:
                     img = affine(img, m.affine.d[side])
                 masked = mask_alpha(img, style.trim == TrimInner)
-                img_legend = alpha_composite(masked, img_legend)
+                img_legend = alpha_composite(masked, img_legend, _get_workspace_color(side_color))
         else:
             img_legend = None
 
@@ -926,7 +926,7 @@ def manuscript_to_artwork(m: Manuscript):
         elif img_legend is None:
             img = img_from_file
         else:
-            img = alpha_composite(img_legend, img_from_file)
+            img = alpha_composite(img_legend, img_from_file, _get_workspace_color(side_color))
         if side_color != background_color:
             sc_img = np.full((oph, opw, 4), _get_workspace_color(side_color), dtype=np.uint16)
             ach = sc_img[:, :, 3].copy()
@@ -935,7 +935,7 @@ def manuscript_to_artwork(m: Manuscript):
             if img is None:
                 img = sc_img
             else:
-                img = alpha_composite(img, sc_img)
+                img = alpha_composite(img, sc_img, _get_workspace_color(side_color))
 
         if img is not None:
             side_fg_image[side] = img
@@ -1013,15 +1013,15 @@ def _get_pil_color(color: ColorBase, alpha: int | None = 255):
     return t if alpha is None else t + (alpha,)
 
 
-def _get_workspace_color(color: ColorBase):
+def _get_workspace_color(color: ColorBase, alpha=65535):
     if color.cs.name == 'DisplayP3Color':
         c = color
     else:
         c = DisplayP3Color(color)
-    linear_channels = np.zeros(4, dtype=float)
-    linear_channels[0] = 1.
-    linear_channels[1:] = c.linear_values()
-    return float_uint16(linear_channels[::-1])
+    ret = np.zeros(4, dtype=np.uint16)
+    ret[:3] = float_uint16(c.linear_values()[::-1])
+    ret[3] = alpha
+    return ret
 
 
 def _ndarray_to_float_tuple(arr: NDArray):

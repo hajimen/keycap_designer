@@ -3,14 +3,17 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-def alpha_composite(fg: NDArray[np.uint16], bg: NDArray[np.uint16]):
+def alpha_composite(fg: NDArray[np.uint16], bg: NDArray[np.uint16], background_color: NDArray[np.uint16] | None = None):
     fg_a = (fg[:, :, 3] / 65535)[:, :, np.newaxis]
     bg_a = (bg[:, :, 3] / 65535)[:, :, np.newaxis]
     fg[:, :, 3] = 65535
     bg[:, :, 3] = 65535
     img_f = fg * fg_a + bg * bg_a * (1. - fg_a)
     mask = img_f[:, :, 3] > 0.
-    img_g = np.zeros_like(img_f[:, :, :3])
+    if background_color is None:
+        img_g = np.zeros_like(img_f[:, :, :3])
+    else:
+        img_g = np.full_like(img_f[:, :, :3], background_color[:3])
     img_g[mask] = img_f[:, :, :3][mask] / (img_f[:, :, 3][mask] / 65535)[:, np.newaxis]
     img = np.zeros(bg.shape, np.uint16)
     img[:, :, :3] = img_g.astype(np.uint16)

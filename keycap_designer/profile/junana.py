@@ -91,13 +91,7 @@ def anti_deform(cb: CapBase, img: NDArray[np.uint16]):
     src_img[:, :, 3] = 0
     img_offset_x, img_offset_y = front_aperture.outer_offset
     src_img[img_offset_y: img_offset_y + img.shape[0], img_offset_x: img_offset_x + img.shape[1]] = img
-    dst_img = np.full(dst_shape + (4, ), 65535, np.uint16)
-    dst_img[:, :, :3] = float_uint16(warp(src_img[:, :, :3], tf, output_shape=dst_shape, cval=1., order=3))
-    a_img = float_uint16(warp(src_img[:, :, 3], tf, output_shape=dst_shape, cval=0., order=1))
-    a_bit = a_img < 32768
-    a_img[a_bit] = 0
-    a_img[~a_bit] = 65535
-    dst_img[:, :, 3] = a_img
+    dst_img = float_uint16(warp(src_img, tf, output_shape=dst_shape, mode='symmetric', order=3))
     return dst_img
 
 

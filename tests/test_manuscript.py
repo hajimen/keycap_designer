@@ -113,3 +113,18 @@ class TestManuscript(unittest.TestCase):
         aw = manuscript_to_artwork(m  @ TopImage(RES / 'square.tiff', trim=TrimOuter))
         img = (aw.side_image[TopSide] // 257).astype(np.uint8)
         self.compare_to_oracle(img, 'test_trim2.png')
+
+    def test_junana_anti_deform(self):
+        ma = Row(1) @ Profile('Junana') @ Specifier('1u')
+        s = Style(3., 0., 0., FONT_PATH, h_o=Center, align=Center, side=FrontSide)
+        m1 = ma @ Legend({s: 'Test'})
+        m2 = ma @ FrontImage(RES / 'square.tiff')
+        m3 = ma @ Legend({s: 'Test'}) @ FrontImage(RES / 'square.tiff')
+        sc = SideColor({FrontSide: sRGBColor(127, 127, 127)})
+        m4 = m1 @ sc
+        m5 = m2 @ sc
+        m6 = m3 @ sc
+
+        for i, m in enumerate([m1, m2, m3, m4, m5, m6]):
+            img = (manuscript_to_artwork(m).side_image[Side.TopFront] // 257).astype(np.uint8)
+            self.compare_to_oracle(img, f'test_junana_anti_deform{i + 1}.png', make_oracle=False)
